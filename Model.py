@@ -1,28 +1,54 @@
 from OpenGL.GL import *
 import math
 import numpy as np
+import copy
 
 class Model:
 	triangles = []
 	normals = []
 	listname = 0
-	def __init__(self,filepath, genList):
-		self.maxX = 0.0
-		self.maxY = 0.0
-		self.maxZ = 0.0
-		self.minX = 0.0
-		self.minY = 0.0
-		self.minZ = 0.0
-		self.loadObj(filepath)
-		self.makeNormals()
+	maxX = 0.0
+	maxY = 0.0
+	maxZ = 0.0
+	minX = 0.0
+	minY = 0.0
+	minZ = 0.0
+	listname = None
+	translate = [0.0, 0.0, 0.0]
+	scale = [1.0, 1.0, 1.0]
+	rotate = [0.0, 0.0, 0.0]
+	finalState = False
+	def __init__(self, filepath, genList):
+		if not filepath == None:
+			self.loadObj(filepath)
+			self.makeNormals()
 		if genList == True:
 			self.createList()
 
 	def createList(self):
+		if not self.listname == None:
+			glDeleteLists(self.listname, 1)
 		self.listname = glGenLists(1)
 		glNewList(self.listname,GL_COMPILE)
 		self.rawDraw()
 		glEndList()
+
+	def getCopy(self):
+		m = Model(None, False)
+		m.triangles = copy.deepcopy(self.triangles)
+		m.normals = copy.deepcopy(self.normals)
+		m.maxX = 0.0
+		m.maxY = 0.0
+		m.maxZ = 0.0
+		m.minX = 0.0
+		m.minY = 0.0
+		m.minZ = 0.0
+		m.listname = None
+		m.translate = [0.0, 0.0, 0.0]
+		m.scale = [1.0, 1.0, 1.0]
+		m.rotate = [0.0, 0.0, 0.0]
+		m.finalState = False
+		return m
 	
 	def loadObj(self,filepath):
 		modelFile = open(filepath,"r")
@@ -37,7 +63,7 @@ class Model:
 				x = float(data[1])
 				y = float(data[2])
 				z = float(data[3])
-				vertices.append((x, y, z))
+				vertices.append([x, y, z])
 				self.maxX = max(self.maxX, x)
 				self.maxY = max(self.maxY, y)
 				self.maxZ = max(self.maxZ, z)
@@ -48,7 +74,7 @@ class Model:
 				vertex1 = vertices[int(data[1].split("/")[0])-1]
 				vertex2 = vertices[int(data[2].split("/")[0])-1]
 				vertex3 = vertices[int(data[3].split("/")[0])-1]
-				triangles.append((vertex1,vertex2,vertex3))
+				triangles.append([vertex1,vertex2,vertex3])
 		self.triangles = triangles
 	
 	def normalize3(self, v1):
@@ -62,11 +88,56 @@ class Model:
 			arm2 = np.subtract(triangle[2],triangle[0])
 			normals.append(self.normalize3(np.cross(arm1,arm2)))
 		self.normals = normals
+
+	def identity_transform(self):
+		self.translate = [0.0, 0.0, 0.0]
+		self.scale = [1.0, 1.0, 1.0]
+		self.rotate = [0.0, 0.0, 0.0]
+
+	#trasform verticies from unit to final form
+	def finalize(self):
+		if self.finalState == False:
+			#rotate
+			#scale
+			#translate
+			self.maxX = 0.
+			self.minX = 0.
+			self.maxY = 0.
+			self.minY = 0.
+			self.maxZ = 0.
+			self.minZ = 0.
+			tris = []
+			for t in self.triangles:
+				tri = []
+				for i in range(3):
+					x = t[i][0] + self.translate[0]
+					y = t[i][1] + self.translate[1]
+					z = t[i][2] + self.translate[2]
+					tri.append( [x, y, z] )
+					self.maxX = max(self.maxX, x)
+					self.minX = min(self.minX, x)
+					self.maxY = max(self.maxY, y)
+					self.minY = min(self.minY, y)
+					self.maxZ = max(self.maxZ, z)
+					self.minZ = min(self.minZ, z)
+				tris.append(tri)
+			self.triangles = tris
+			self.finalState = True
+			#self.identity_transform()
+		else:
+			print 'Model already in final state'
 	
 	def draw(self):
+		glPushMatrix(GL_MODELVIEW)
 		glCallList(self.listname)
+		glPopMatrix(GL_MODELVIEW)
 	
 	def rawDraw(self):
+		glRotate(self.rotate[2], 0.0, 0.0, 1.0)
+		glRotate(self.rotate[1], 0.0, 1.0, 0.0)
+		glRotate(self.rotate[0], 1.0, 0.0, 0.0)
+		glTranslate(self.translate[0], self.translate[1], self.translate[2])
+		glScale(self.scale[0], self.scale[1], self.scale[2])
 		glBegin(GL_TRIANGLES)
 		i = 0
 		for triangle in self.triangles:

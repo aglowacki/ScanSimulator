@@ -7,6 +7,7 @@ APS ANL
 import sys
 import math
 from PyQt4 import QtCore, QtGui, QtOpenGL
+from Scene import Scene
 from Model import Model
 from Scanner import Scanner
 import numpy as np
@@ -38,10 +39,14 @@ class Window(QtGui.QWidget):
 		self.zSlider.valueChanged.connect(self.glWidget.setZRotation)
 		self.glWidget.zRotationChanged.connect(self.zSlider.setValue)
 
-		self.exportBtn = QtGui.QPushButton('Export')
-		self.exportBtn.clicked.connect(self.exportToHDF)
-		self.loadModelBtn = QtGui.QPushButton('Load Model')
-		self.loadModelBtn.clicked.connect(self.loadModel)
+		self.btnGenScan = QtGui.QPushButton('Generate')
+		self.btnGenScan.clicked.connect(self.generateScan)
+		self.btnScan = QtGui.QPushButton('Start Scan')
+		self.btnScan.clicked.connect(self.runScan)
+		self.btnLoadBaseMesh = QtGui.QPushButton('Load Base Mesh')
+		self.btnLoadBaseMesh.clicked.connect(self.loadBaseMesh)
+		self.btnLoadElementMesh = QtGui.QPushButton('Load Element Mesh')
+		self.btnLoadElementMesh.clicked.connect(self.loadElementMesh)
 
 		mainLayout = QtGui.QHBoxLayout()
 		mainLayout.addWidget(self.glWidget)
@@ -51,19 +56,29 @@ class Window(QtGui.QWidget):
 		m2Layout = QtGui.QVBoxLayout()
 		m2Layout.addLayout(self.createGridInput())
 		m2Layout.addLayout(mainLayout)
-		m2Layout.addWidget(self.loadModelBtn)
-		m2Layout.addWidget(self.exportBtn)
+		hbox2 = QtGui.QHBoxLayout()
+		hbox3 = QtGui.QHBoxLayout()
+		hbox2.addWidget(self.btnLoadBaseMesh)
+		hbox2.addWidget(self.btnLoadElementMesh)
+		hbox3.addWidget(self.btnGenScan)
+		hbox3.addWidget(self.btnScan)
+		m2Layout.addLayout(hbox2)
+		m2Layout.addLayout(hbox3)
 		self.setLayout(m2Layout)
 
-		self.xSlider.setValue(15 * 16)
-		self.ySlider.setValue(345 * 16)
+		#self.xSlider.setValue(15 * 16)
+		#self.ySlider.setValue(345 * 16)
+		#self.zSlider.setValue(0 * 16)
+
+		self.xSlider.setValue(0 * 16)
+		self.ySlider.setValue(360 * 16)
 		self.zSlider.setValue(0 * 16)
 
 
-		self.setWindowTitle("Model2HDF")
+		self.setWindowTitle("Scan Simulator")
 
 	def createGridInput(self):
-		GridStartVal = '10'
+		GridStartVal = '2'
 		hBox = QtGui.QHBoxLayout()
 		self.GridXIn = QtGui.QLineEdit()
 		self.GridYIn = QtGui.QLineEdit()
@@ -97,17 +112,73 @@ class Window(QtGui.QWidget):
 
 		return slider
 
-	def exportToHDF(self):
+	def generateScan(self):
+		gridX = int(self.GridXIn.text())
+		gridY = int(self.GridYIn.text())
+		gridZ = int(self.GridZIn.text())
+		if self.glWidget.baseModel == None:
+			print 'Please select a base modle first!'
+			return 
+		'''
+		if self.glWidget.elementModel == None:
+			print 'Please select a element modle first!'
+			return 
+		'''
+		if self.glWidget.scene == None:
+			self.glWidget.scene = Scene()
+		else:
+			self.glWidget.scene.clear()
+		print 'generating scene with grid size',gridX, gridY, gridZ
+		self.glWidget.drawBase = False
+		trans = 2.0
+		xTrans = 0.0
+		yTrans = 0.0
+		zTrans = 0.0
+		for z in range(gridZ):
+			yTrans = 0.0
+			for y in range(gridY):
+				xTrans = 0.0
+				for x in range(gridX):
+					m = self.glWidget.baseModel.getCopy()
+					m.translate = [ xTrans,  yTrans, zTrans ]
+					m.createList()
+					self.glWidget.scene.addBaseModel(m)
+					xTrans += trans
+				yTrans += trans
+			zTrans += trans
+		self.glWidget.drawScene = True					
+		self.glWidget.updateGL()
+		#self.scene.generate(baseModel, elementModel, (gridX, gridY, gridZ))
+
+	def runScan(self):
 		dimX = 100
 		dimY = 100
 		dimZ = 1
-		self.scan.exportToHDF(self.glWidget.model, dimX, dimY)
+		#scene
+		if not self.glWidget.scene == None:
+			self.glWidget.scene.finalize()
+			self.scan.exportSceneToHDF(self.glWidget.scene, dimX, dimY, False)
+		elif not self.glWidget.baseModel == None:
+			self.scan.exportModelToHDF(self.glWidget.baseModel, dimX, dimY)
+		else:
+			print 'base model is not set!'
 
-	def loadModel(self, a):
+	def loadBaseMesh(self, a):
 		filename = QtGui.QFileDialog.getOpenFileName( self, "Open Mesh", ".", "Mesh Files (*.obj)")
-		print 'loading model', filename
-		self.glWidget.model = Model(filename, True)
+		print 'loading base mesh', filename
+		self.glWidget.baseModel = Model(filename, True)
+		#self.glWidget.baseModel.translate[0] = 3.0
+		#self.glWidget.baseModel.scale[1] = 3.0
+		#self.glWidget.baseModel.rotate[2] = 45.0
+		#self.glWidget.baseModel.createList()
+		self.glWidget.drawBase = True
 		self.glWidget.updateGL()
+
+	def loadElementMesh(self, a):
+		filename = QtGui.QFileDialog.getOpenFileName( self, "Open Mesh", ".", "Mesh Files (*.obj)")
+		print 'loading Element mesh', filename
+		self.glWidget.elementModel = Model(filename, True)
+		#self.glWidget.updateGL()
 
 
 class GLWidget(QtOpenGL.QGLWidget):
@@ -123,19 +194,22 @@ class GLWidget(QtOpenGL.QGLWidget):
 		self.zRot = 0
 
 		self.gridList = None
+		self.displayGrid = False
 		self.gridX = 10
 		self.gridY = 10
 		self.gridZ = 10
 
-		self.model = None
-		self.models = []
+		self.scene = None
+		self.baseModel = None
+		self.drawBase = False
+		self.elementModel = None
 
 		self.orthoLeft = -10.5
 		self.orthoRight = 10.5
 		self.orthoTop = -10.5
 		self.orthoBottom = 10.5
-		self.orthoNear = 4.0
-		self.orthoFar = 150.0
+		self.orthoNear = 1.0
+		self.orthoFar = 1500
 
 		self.fbo = None
 		self.lastPos = QtCore.QPoint()
@@ -215,7 +289,7 @@ class GLWidget(QtOpenGL.QGLWidget):
 		GL.glEnable(GL.GL_DEPTH_TEST)
 		GL.glEnable(GL.GL_CULL_FACE)
 
-		#self.genGrid(self.gridX, self.gridY, self.gridZ)
+		self.genGrid(self.gridX, self.gridY, self.gridZ)
 
 		mat_specular = [ 1.0, 1.0, 1.0, 1.0 ]
 		mat_shininess = [ 50.0 ]
@@ -228,13 +302,13 @@ class GLWidget(QtOpenGL.QGLWidget):
 		GL.glEnable(GL.GL_LIGHT0)
 
 
-	def genGrid(self, xSize, ySize, zSiz):
-		x0 = -(xSize / 2)
-		x1 = -x0
-		y0 = -(ySize / 2)
-		y1 = -y0
-		z0 = -(zSize / 2)
-		z1 = -z0
+	def genGrid(self, xSize, ySize, zSize):
+		x0 = 0
+		x1 = xSize 
+		y0 = 0
+		y1 = ySize
+		z0 = 0
+		z1 = zSize
 		self.gridList = GL.glGenLists(1)
 		GL.glNewList(self.gridList, GL.GL_COMPILE)
 		GL.glDisable(GL.GL_LIGHTING)
@@ -270,12 +344,12 @@ class GLWidget(QtOpenGL.QGLWidget):
 		GL.glRotated(self.xRot / 16.0, 1.0, 0.0, 0.0)
 		GL.glRotated(self.yRot / 16.0, 0.0, 1.0, 0.0)
 		GL.glRotated(self.zRot / 16.0, 0.0, 0.0, 1.0)
-		#if not self.gridList == None:
-		#	GL.glCallList(self.gridList)
-		for m in self.models:
-			m.draw()
-		if not self.model == None:
-			self.model.draw()
+		if self.displayGrid:
+			GL.glCallList(self.gridList)
+		if not self.baseModel == None and self.drawBase:
+			self.baseModel.draw()
+		if not self.scene == None:
+			self.scene.draw()
 
 	def resizeGL(self, width, height):
 		side = min(width, height)

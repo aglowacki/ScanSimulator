@@ -1,3 +1,4 @@
 
 Required packages:
 	conda install pyopengl
+	conda install vtk
