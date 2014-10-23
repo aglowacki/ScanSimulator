@@ -42,44 +42,18 @@ class Model:
 		return m
 	
 	def loadObj(self,filepath):
-		modelFile = open(filepath,"r")
-		points = vtk.vtkPoints()
-		for line in modelFile.readlines():
-			line = line.strip()
-			if len(line)==0 or line.startswith("#"):
-				continue
-			data = line.split(" ")
-			if data[0]=="v":
-				x = float(data[1])
-				y = float(data[2])
-				z = float(data[3])
-				points.InsertNextPoint(x, y, z)
-				self.maxX = max(self.maxX, x)
-				self.maxY = max(self.maxY, y)
-				self.maxZ = max(self.maxZ, z)
-				self.minX = min(self.minX, x)
-				self.minY = min(self.minY, y)
-				self.minZ = min(self.minZ, z)
-			if data[0]=="f":
-				triangle = vtk.vtkTriangle()
-				a = int(data[1].split("/")[0])-1
-				b = int(data[2].split("/")[0])-1
-				c = int(data[3].split("/")[0])-1
-				triangle.GetPointIds().SetId(0, a)
-				triangle.GetPointIds().SetId(1, b)
-				triangle.GetPointIds().SetId(2, c)
-				self.triangles.InsertNextCell(triangle)
-				self.tris += [triangle]
-		self.polyData.SetPoints(points)
-		self.polyData.SetPolys(self.triangles)
-		#self.polyData.Modified()
-		cleanPolyData = vtk.vtkCleanPolyData()
-		cleanPolyData.SetInput(self.polyData)
-		smooth_loop = vtk.vtkLoopSubdivisionFilter()
-		smooth_loop.SetNumberOfSubdivisions(3)
-		smooth_loop.SetInputConnection(cleanPolyData.GetOutputPort())
+		#cleanPolyData = vtk.vtkCleanPolyData()
+		#cleanPolyData.SetInput(self.polyData)
+		#cleanPolyData.SetTolerance(0.005)
+		#smooth_loop = vtk.vtkLoopSubdivisionFilter()
+		#smooth_loop.SetNumberOfSubdivisions(3)
+		#smooth_loop.SetInputConnection(cleanPolyData.GetOutputPort())
+		self.c = vtk.vtkSphereSource()
+		self.c.SetRadius(50)
+		self.c.SetThetaResolution(100)
+		self.c.SetPhiResolution(100)
 		self.locator = vtk.vtkCellLocator()
-		self.locator.SetDataSet(smooth_loop.GetOutput())
+		self.locator.SetDataSet(self.c.GetOutput())
 		self.locator.BuildLocator()
 	
 	def normalize3(self, v1):
@@ -126,6 +100,28 @@ class Model:
 		glEnd()
 
 	def intersect_line( self, L0, L1 ):
+		# Setup actor and mapper
+		mapper = vtk.vtkPolyDataMapper()
+		if vtk.VTK_MAJOR_VERSION <= 5:
+			mapper.SetInputConnection(self.polyData.GetProducerPort())
+		else:
+			mapper.SetInputData(self.c.GetOutput())
+
+		actor = vtk.vtkActor()
+		actor.SetMapper(mapper)
+		actor.GetProperty().SetPointSize(10)
+
+		# Setup render window, renderer, and interactor
+		renderer = vtk.vtkRenderer()
+		renderWindow = vtk.vtkRenderWindow()
+		renderWindow.AddRenderer(renderer)
+		renderWindowInteractor = vtk.vtkRenderWindowInteractor()
+		renderWindowInteractor.SetRenderWindow(renderWindow)
+		renderer.AddActor(actor)
+
+		renderWindow.Render()
+		renderWindowInteractor.Start()
+		return
 		tolerance = 0.00001
 		tmut = vtk.mutable(0)
 		x = [0.0, 0.0, 0.0]
