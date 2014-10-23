@@ -4,10 +4,9 @@ APS ANL
 10/17/2014
 '''
 
-from Scene import Scene
 from Model import Model
 import numpy as np
-import math, time
+import math, time, sys
 from H5Exporter import H5Exporter
 import multiprocessing
 import threading
@@ -82,7 +81,7 @@ class Scanner:
 		print 'finished exporting'
 
 
-	def exportSceneToHDF(self, scene, dimX, dimY, toThread ):
+	def exportSceneToHDF(self, baseModels, elementModels, dimX, dimY, toThread ):
 		dimZ = 1
 		print 'exporting'
 		saveVal = 1
@@ -92,9 +91,24 @@ class Scanner:
 		saver = H5Exporter()
 		h5st = saver.H5_Start('test.h5', dimX, dimY, dimZ)
 
-		print 'bounding box minX',scene.minX,'maxX',scene.maxX,'minY',scene.minY,'maxY',scene.maxY,'minZ',scene.minZ,'maxZ',scene.maxZ
-		xItr = (scene.maxX - scene.minX) / float(dimX)
-		yItr = (scene.maxY - scene.minY) / float(dimY)
+		maxX = sys.float_info.min
+		minX = sys.float_info.max
+		maxY = sys.float_info.min
+		minY = sys.float_info.max
+		maxZ = sys.float_info.min
+		minZ = sys.float_info.max
+		for m in baseModels:
+			b = m.source.GetOutput().GetBounds()
+			print 'bounds', b
+			minX = min(minX, b[0])
+			maxX = max(maxX, b[1])
+			minY = min(minY, b[2])
+			maxY = max(maxY, b[3])
+			minZ = min(minZ, b[4])
+			maxZ = max(maxZ, b[5])
+		print 'bounding box minX',minX,'maxX',maxX,'minY',minY,'maxY',maxY,'minZ',minZ,'maxZ',maxZ
+		xItr = (maxX - minX) / float(dimX)
+		yItr = (maxY - minY) / float(dimY)
 		if toThread == True:
 			threads = []
 			cpus = multiprocessing.cpu_count()
@@ -117,11 +131,13 @@ class Scanner:
 			for y in range(dimY):
 				print y
 				for x in range(dimX):
-					L0 = [scene.minX + (xItr * x), scene.minY + (yItr * y), scene.minZ - 100]
-					L1 = [scene.minX + (xItr * x), scene.minY + (yItr * y), scene.maxZ + 100]
+					L0 = [minX + (xItr * x), minY + (yItr * y), minZ - 10]
+					L1 = [L0[0], L0[1],  maxZ + 10]
+					#L1 = [minX + (xItr * x), minY + (yItr * y), maxZ + 10]
 					#print 'L0',L0, 'L1',L1
 					#i = scene.intersect_line(L0, L1)
-					wdata[0][y][x] = scene.intersect_baseModels(L0, rDir)
+					for m in baseModels:
+						wdata[0][y][x] += m.intersect_line(L0, L1)
 		saver.H5_SaveSlice(h5st, wdata, 0)
 		saver.H5_End(h5st)
 		print 'finished exporting'
