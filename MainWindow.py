@@ -38,6 +38,7 @@ class MainWindow(QtGui.QMainWindow):
 		hbox3.addWidget(self.btnGenScan)
 		hbox3.addWidget(self.btnScan)
 		self.vl.addLayout(self.createGridInput())
+		self.vl.addLayout(self.createDatasetInput())
 		self.vl.addLayout(hbox2)
 		self.vl.addLayout(hbox3)
  
@@ -74,6 +75,30 @@ class MainWindow(QtGui.QMainWindow):
 
 		vBox = QtGui.QVBoxLayout()
 		vBox.addWidget(QtGui.QLabel("Grid Size"))
+		vBox.addLayout(hBox)
+
+		return vBox
+
+	def createDatasetInput(self):
+		DsetStartVal = '1000'
+		hBox = QtGui.QHBoxLayout()
+		self.DsetXIn = QtGui.QLineEdit()
+		self.DsetYIn = QtGui.QLineEdit()
+		self.DsetZIn = QtGui.QLineEdit()
+
+		self.DsetXIn.setText(DsetStartVal)
+		self.DsetYIn.setText(DsetStartVal)
+		self.DsetZIn.setText('1')
+
+		hBox.addWidget(QtGui.QLabel("X"))
+		hBox.addWidget(self.DsetXIn)
+		hBox.addWidget(QtGui.QLabel("Y"))
+		hBox.addWidget(self.DsetYIn)
+		hBox.addWidget(QtGui.QLabel("Z"))
+		hBox.addWidget(self.DsetZIn)
+
+		vBox = QtGui.QVBoxLayout()
+		vBox.addWidget(QtGui.QLabel("Dataset Size"))
 		vBox.addLayout(hBox)
 
 		return vBox
@@ -181,8 +206,9 @@ class MainWindow(QtGui.QMainWindow):
 		print 'Finished generating scene'
 
 	def runScan(self):
-		dimX = 100
-		dimY = 100
+		dimX = int(self.DsetXIn.text())
+		dimY = int(self.DsetYIn.text())
+		dimZ = int(self.DsetZIn.text())
 		dimZ = 1
 		#scene
 		if self.isSceneGenerated:

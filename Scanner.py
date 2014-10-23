@@ -19,9 +19,15 @@ class Scanner:
 		saveVal = 1
 		rDir = [0.0, 0.0, 1.0]
 
+		datasetNames = ['base']
+		elementData = []
+		#for i in range(len(elementModels)):
+		for i in range(1):
+			datasetNames += ['element'+str(i)]
+			elementData.append( np.zeros((dimZ, dimY, dimX), dtype=np.float32) )
 		wdata = np.zeros((dimZ, dimY, dimX), dtype=np.float32)
 		saver = H5Exporter()
-		h5st = saver.H5_Start('test.h5', dimX, dimY, dimZ)
+		h5st = saver.H5_Start('test.h5', datasetNames, dimX, dimY, dimZ)
 
 		maxX = sys.float_info.min
 		minX = sys.float_info.max
@@ -49,7 +55,13 @@ class Scanner:
 				L1 = [L0[0], L0[1],  maxZ + 10]
 				for m in baseModels:
 					wdata[0][y][x] += m.intersect_line(L0, L1)
-		saver.H5_SaveSlice(h5st, wdata, 0)
+				for e in range(len(elementModels)):
+					elementData[0][0][y][x] += elementModels[e].intersect_line(L0, L1)
+		saver.H5_SaveSlice(h5st, datasetNames[0], wdata, 0)
+		#for e in range(len(elementModels)):
+		#	print 'Saving element', e
+		#	saver.H5_SaveSlice(h5st, datasetNames[e], elementData[e], 0)
+		saver.H5_SaveSlice(h5st, datasetNames[1], elementData[0], 0)
 		saver.H5_End(h5st)
 		print 'finished exporting'
 
