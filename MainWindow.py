@@ -114,7 +114,7 @@ class MainWindow(QtGui.QMainWindow):
 		'''
 		random.seed(time.time())
 		sTrans = [ [-0.5, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, -0.5, 0.0], [0.0, 0.5, 0.0], [0.0, 0.0, -0.5], [0.0, 0.0, 0.5] ]
-		elementAmt = 6
+		elementsPerFace = 2
 		trans = 2.0
 		xTrans = 0.0
 		yTrans = 0.0
@@ -140,22 +140,45 @@ class MainWindow(QtGui.QMainWindow):
 					m.rotate(xRot, yRot, zRot)
 					self.ren.AddActor(m.actor)
 					self.baseModels += [m]
-					for i in range(elementAmt):
-						s = SphereModel()
-						s.translate(xTrans, yTrans, zTrans)
-						s.rotate(xRot, yRot, zRot)
-						s.translate(sTrans[i][0], sTrans[i][1], sTrans[i][2] ) 
-						s.scale(0.2, 0.2, 0.2)
-						s.setColor(0.8, 0.2, 0.2)
-						self.ren.AddActor(s.actor)
-						self.elementModels += [s]
-
+					for i in range(len(sTrans)):
+						for j in range(elementsPerFace):
+							s = SphereModel()
+							#parent model transform
+							s.translate(xTrans, yTrans, zTrans)
+							s.rotate(xRot, yRot, zRot)
+							#random parent suface local transform
+							sXTran = sTrans[i][0]
+							sYTran = sTrans[i][1]
+							sZTran = sTrans[i][2]
+							if random.random() > 0.5:
+								op = 1
+							else:
+								op = -1
+							if not sTrans[i][0] == 0.0:
+								sYTran += random.random() * 0.5 * op
+								sZTran += random.random() * 0.5 * op
+							elif not sTrans[i][1] == 0.0:
+								sXTran += random.random() * 0.5 * op
+								sZTran += random.random() * 0.5 * op
+							elif not sTrans[i][2] == 0.0:
+								sYTran += random.random() * 0.5 * op
+								sXTran += random.random() * 0.5 * op
+							#local transform
+							#s.translate(sTrans[i][0], sTrans[i][1], sTrans[i][2] ) 
+							s.translate(sXTran, sYTran, sZTran ) 
+							s.scale(0.2, 0.2, 0.2)
+							s.setColor(0.8, 0.2, 0.2)
+							self.ren.AddActor(s.actor)
+							self.elementModels += [s]
+						#for j
+					#for i
 					xTrans += trans
 				yTrans += trans
 			zTrans += trans
 		
 		self.ren.ResetCamera()
 		self.isSceneGenerated = True
+		print 'Finished generating scene'
 
 	def runScan(self):
 		dimX = 100
