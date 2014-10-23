@@ -11,6 +11,7 @@ from PyQt4 import QtCore, QtGui
 from vtk.qt4.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PrimitiveModels import CubeModel, SphereModel
 from Scanner import Scanner
+import random, time
  
 class MainWindow(QtGui.QMainWindow):
  
@@ -84,35 +85,36 @@ class MainWindow(QtGui.QMainWindow):
 		if self.isSceneGenerated:
 			print 'Override current scene?'
 		print 'generating scene with grid size',gridX, gridY, gridZ
+
 		'''
+		#transforms are stack, scale, rotate, then translate
 		c0 = CubeModel()
+		c0.translate(2.0, 0.0, 0.0)
+		c0.rotate(0.0, 0.0, 45.0)
+		c0.scale(0.5, 0.5, 0.5)
 		self.ren.AddActor(c0.actor)
 		self.baseModels += [c0]
- 
+
 		c1 = CubeModel()
-		c1.source.SetCenter(0.5, 0.5, 1.5)
-		c1.source.Update()
-		c1.Update()
+		c1.setColor(0.8, .25, .25)
 		self.ren.AddActor(c1.actor)
 		self.baseModels += [c1]
- 		'''
-		sphereModel = SphereModel()
-		#sphereModel.source.SetCenter(0., 0., 0.)
-		#sphereModel.source.Update()
-		#sphereModel.Update()
-		self.ren.AddActor(sphereModel.actor)
-		self.baseModels += [sphereModel]
-
+ 		
 		sphereModel1 = SphereModel()
 		sphereModel1.source.SetCenter(0.5, 0.5, 0.)
 		sphereModel1.source.Update()
 		sphereModel1.Update()
 		self.ren.AddActor(sphereModel1.actor)
 		self.baseModels += [sphereModel1]
+		'''
 
+		'''
 		#self.baseModels += [cubeModel]
 		#self.elementModels += [sphereModel]
 		'''
+		random.seed(time.time())
+		sTrans = [ [-0.5, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, -0.5, 0.0], [0.0, 0.5, 0.0], [0.0, 0.0, -0.5], [0.0, 0.0, 0.5] ]
+		elementAmt = 6
 		trans = 2.0
 		xTrans = 0.0
 		yTrans = 0.0
@@ -122,14 +124,36 @@ class MainWindow(QtGui.QMainWindow):
 			for y in range(gridY):
 				xTrans = 0.0
 				for x in range(gridX):
-					m = self.glWidget.baseModel.getCopy()
-					m.translate = [ xTrans,  yTrans, zTrans ]
-					m.createList()
-					#self.glWidget.scene.addBaseModel(m)
+					'''
+					for i in range(elementAmt):
+						s = SphereModel()
+						s.translate(sTrans[i][0], sTrans[i][1], sTrans[i][2] ) 
+						s.scale(0.2, 0.2, 0.2)
+						self.ren.AddActor(s.actor)
+						self.elementModels += [s]
+					'''	
+					m = CubeModel()
+					m.translate(xTrans,  yTrans, zTrans)
+					xRot = random.random() * 180.0 
+					yRot = random.random() * 180.0 
+					zRot = random.random() * 180.0 
+					m.rotate(xRot, yRot, zRot)
+					self.ren.AddActor(m.actor)
+					self.baseModels += [m]
+					for i in range(elementAmt):
+						s = SphereModel()
+						s.translate(xTrans, yTrans, zTrans)
+						s.rotate(xRot, yRot, zRot)
+						s.translate(sTrans[i][0], sTrans[i][1], sTrans[i][2] ) 
+						s.scale(0.2, 0.2, 0.2)
+						s.setColor(0.8, 0.2, 0.2)
+						self.ren.AddActor(s.actor)
+						self.elementModels += [s]
+
 					xTrans += trans
 				yTrans += trans
 			zTrans += trans
-		'''
+		
 		self.ren.ResetCamera()
 		self.isSceneGenerated = True
 
@@ -139,7 +163,7 @@ class MainWindow(QtGui.QMainWindow):
 		dimZ = 1
 		#scene
 		if self.isSceneGenerated:
-			self.scan.exportSceneToHDF(self.baseModels, self.elementModels, dimX, dimY, False)
+			self.scan.exportSceneToHDF(self.baseModels, self.elementModels, dimX, dimY)
 		else:
 			print 'Please generate a scene first'
 
