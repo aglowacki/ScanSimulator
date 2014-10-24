@@ -39,6 +39,7 @@ class MainWindow(QtGui.QMainWindow):
 		hbox3.addWidget(self.btnScan)
 		self.vl.addLayout(self.createGridInput())
 		self.vl.addLayout(self.createDatasetInput())
+		self.vl.addLayout(self.createGenProps())
 		self.vl.addLayout(hbox2)
 		self.vl.addLayout(hbox3)
  
@@ -94,8 +95,8 @@ class MainWindow(QtGui.QMainWindow):
 		hBox.addWidget(self.DsetXIn)
 		hBox.addWidget(QtGui.QLabel("Y"))
 		hBox.addWidget(self.DsetYIn)
-		hBox.addWidget(QtGui.QLabel("Z"))
-		hBox.addWidget(self.DsetZIn)
+		#hBox.addWidget(QtGui.QLabel("Z"))
+		#hBox.addWidget(self.DsetZIn)
 
 		vBox = QtGui.QVBoxLayout()
 		vBox.addWidget(QtGui.QLabel("Dataset Size"))
@@ -103,44 +104,89 @@ class MainWindow(QtGui.QMainWindow):
 
 		return vBox
 
+	def createGenProps(self):
+		DsetStartVal = '1000'
+		self.BaseScaleStart = QtGui.QLineEdit()
+		self.BaseScaleEnd = QtGui.QLineEdit()
+		self.BaseRotateStart = QtGui.QLineEdit()
+		self.BaseRotateEnd = QtGui.QLineEdit()
+
+		self.BaseScaleStart.setText('0.5')
+		self.BaseScaleEnd.setText('1.0')
+		self.BaseRotateStart.setText('0.0')
+		self.BaseRotateEnd.setText('180.0')
+
+		vBox = QtGui.QVBoxLayout()
+		hBox0 = QtGui.QHBoxLayout()
+		hBox0.addWidget(QtGui.QLabel("From"))
+		hBox0.addWidget(self.BaseScaleStart)
+		hBox0.addWidget(QtGui.QLabel("To"))
+		hBox0.addWidget(self.BaseScaleEnd)
+		vBox.addWidget(QtGui.QLabel("Base Material Scale"))
+		vBox.addLayout(hBox0)
+
+		hBox1 = QtGui.QHBoxLayout()
+		hBox1.addWidget(QtGui.QLabel("From"))
+		hBox1.addWidget(self.BaseRotateStart)
+		hBox1.addWidget(QtGui.QLabel("To"))
+		hBox1.addWidget(self.BaseRotateEnd)
+		vBox.addWidget(QtGui.QLabel("Base Material Rotate (degrees)"))
+		vBox.addLayout(hBox1)
+
+		return vBox
+
+	def clearScene(self):
+		if self.isSceneGenerated:
+			print 'Override current scene?'
+			for m in self.baseModels:
+				self.ren.RemoveActor(m.actor)
+				del m
+			self.baseModels = []
+			for e in self.elementModels:
+				self.ren.RemoveActor(e.actor)
+				del e
+			self.elementModels = []
+
+
 	def generateScan(self):
 		gridX = int(self.GridXIn.text())
 		gridY = int(self.GridYIn.text())
 		gridZ = int(self.GridZIn.text())
-		if self.isSceneGenerated:
-			print 'Override current scene?'
+		self.startBaseScale = float(self.BaseScaleStart.text())
+		self.endBaseScale = float(self.BaseScaleEnd.text())
+		self.startBaseRotate = float(self.BaseRotateStart.text())
+		self.endBaseRotate = float(self.BaseRotateEnd.text())
+		self.clearScene()
 		print 'generating scene with grid size',gridX, gridY, gridZ
+		self.generateWithCubesAndSpheres(gridX, gridY, gridZ)
+		self.ren.ResetCamera()
+		self.iren.Render()
+		self.isSceneGenerated = True
+		print 'Finished generating scene'
 
-		'''
-		#transforms are stack, scale, rotate, then translate
-		c0 = CubeModel()
-		c0.translate(2.0, 0.0, 0.0)
-		c0.rotate(0.0, 0.0, 45.0)
-		c0.scale(0.5, 0.5, 0.5)
-		self.ren.AddActor(c0.actor)
-		self.baseModels += [c0]
+	def genRandRange(self, start, stop):
+		return start + ( random.random() * (stop - start) )
 
-		c1 = CubeModel()
-		c1.setColor(0.8, .25, .25)
-		self.ren.AddActor(c1.actor)
-		self.baseModels += [c1]
- 		
-		sphereModel1 = SphereModel()
-		sphereModel1.source.SetCenter(0.5, 0.5, 0.)
-		sphereModel1.source.Update()
-		sphereModel1.Update()
-		self.ren.AddActor(sphereModel1.actor)
-		self.baseModels += [sphereModel1]
-		'''
-
-		'''
-		#self.baseModels += [cubeModel]
-		#self.elementModels += [sphereModel]
-		'''
+	def generateWithCubesAndSpheres(self, gridX, gridY, gridZ):
 		random.seed(time.time())
-		sTrans = [ [-0.5, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, -0.5, 0.0], [0.0, 0.5, 0.0], [0.0, 0.0, -0.5], [0.0, 0.0, 0.5] ]
-		elementsPerFace = 2
-		trans = 2.0
+		sRadius = 0.5 * 0.2
+		maxTrans = 0.0
+		baseScales = []
+		for z in range(gridZ):
+			bScaleY = []
+			for y in range(gridY):
+				bScaleX = []
+				for x in range(gridX):
+					val = self.genRandRange(self.startBaseScale, self.endBaseScale)
+					maxTrans = max(maxTrans, val)
+					bScaleX += [val]
+				bScaleY += [bScaleX]
+			baseScales += [bScaleY]
+		#rScale = self.genRandRange(self.startBaseScale, self.endBaseScale)
+		#sTrans = [ [-((0.5 * rScale) + sRadius), 0.0, 0.0], [(0.5 * rScale) + sRadius, 0.0, 0.0], [0.0, -((0.5 * rScale)+sRadius), 0.0], [0.0, (0.5 * rScale)+sRadius, 0.0], [0.0, 0.0, -((0.5 * rScale)+sRadius)], [0.0, 0.0, (0.5 * rScale+sRadius)] ]
+		elementsPerFace = 10
+		#trans = rScale * 2.0
+		trans = maxTrans * 2.0
 		xTrans = 0.0
 		yTrans = 0.0
 		zTrans = 0.0
@@ -149,20 +195,21 @@ class MainWindow(QtGui.QMainWindow):
 			for y in range(gridY):
 				xTrans = 0.0
 				for x in range(gridX):
-					'''
-					for i in range(elementAmt):
-						s = SphereModel()
-						s.translate(sTrans[i][0], sTrans[i][1], sTrans[i][2] ) 
-						s.scale(0.2, 0.2, 0.2)
-						self.ren.AddActor(s.actor)
-						self.elementModels += [s]
-					'''	
+					#rScale = self.genRandRange(self.startBaseScale, self.endBaseScale)
+					#sTrans = [ [-0.5 - rScale, 0.0, 0.0], [0.5 + rScale, 0.0, 0.0], [0.0, -0.5 - rScale, 0.0], [0.0, 0.5 + rScale, 0.0], [0.0, 0.0, -0.5 - rScale], [0.0, 0.0, 0.5 + rScale] ]
+					rScale = baseScales[z][y][x]
+					sTrans = [ [-((0.5 * rScale) + sRadius), 0.0, 0.0], [(0.5 * rScale) + sRadius, 0.0, 0.0], [0.0, -((0.5 * rScale)+sRadius), 0.0], [0.0, (0.5 * rScale)+sRadius, 0.0], [0.0, 0.0, -((0.5 * rScale)+sRadius)], [0.0, 0.0, (0.5 * rScale+sRadius)] ]
 					m = CubeModel()
 					m.translate(xTrans,  yTrans, zTrans)
-					xRot = random.random() * 180.0 
-					yRot = random.random() * 180.0 
-					zRot = random.random() * 180.0 
+					#xRot = random.random() * 180.0 
+					#yRot = random.random() * 180.0 
+					#zRot = random.random() * 180.0 
+					xRot = self.genRandRange(self.startBaseRotate, self.endBaseRotate )
+					yRot = self.genRandRange(self.startBaseRotate, self.endBaseRotate )
+					zRot = self.genRandRange(self.startBaseRotate, self.endBaseRotate )
 					m.rotate(xRot, yRot, zRot)
+					print 'rScale', rScale
+					m.scale(rScale, rScale, rScale)
 					self.ren.AddActor(m.actor)
 					self.baseModels += [m]
 					for i in range(len(sTrans)):
@@ -175,19 +222,22 @@ class MainWindow(QtGui.QMainWindow):
 							sXTran = sTrans[i][0]
 							sYTran = sTrans[i][1]
 							sZTran = sTrans[i][2]
+							
+							#randomize where on the face we put it
 							if random.random() > 0.5:
 								op = 1
 							else:
 								op = -1
 							if not sTrans[i][0] == 0.0:
-								sYTran += random.random() * 0.5 * op
-								sZTran += random.random() * 0.5 * op
+								sYTran += random.random() * sTrans[1][0] * op
+								sZTran += random.random() * sTrans[1][0] * op
 							elif not sTrans[i][1] == 0.0:
-								sXTran += random.random() * 0.5 * op
-								sZTran += random.random() * 0.5 * op
+								sXTran += random.random() * sTrans[1][0] * op
+								sZTran += random.random() * sTrans[1][0] * op
 							elif not sTrans[i][2] == 0.0:
-								sYTran += random.random() * 0.5 * op
-								sXTran += random.random() * 0.5 * op
+								sYTran += random.random() * sTrans[1][0] * op
+								sXTran += random.random() * sTrans[1][0] * op
+							
 							#local transform
 							#s.translate(sTrans[i][0], sTrans[i][1], sTrans[i][2] ) 
 							s.translate(sXTran, sYTran, sZTran ) 
@@ -198,12 +248,12 @@ class MainWindow(QtGui.QMainWindow):
 						#for j
 					#for i
 					xTrans += trans
+				#end for X
 				yTrans += trans
+			#end for Y
 			zTrans += trans
+		#end for Z
 		
-		self.ren.ResetCamera()
-		self.isSceneGenerated = True
-		print 'Finished generating scene'
 
 	def runScan(self):
 		dimX = int(self.DsetXIn.text())
