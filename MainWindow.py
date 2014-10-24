@@ -110,28 +110,35 @@ class MainWindow(QtGui.QMainWindow):
 		self.BaseScaleEnd = QtGui.QLineEdit()
 		self.BaseRotateStart = QtGui.QLineEdit()
 		self.BaseRotateEnd = QtGui.QLineEdit()
+		self.ElementsPerFaceIn = QtGui.QLineEdit()
 
-		self.BaseScaleStart.setText('0.5')
-		self.BaseScaleEnd.setText('1.0')
+		self.BaseScaleStart.setText('4.0')
+		self.BaseScaleEnd.setText('7.0')
 		self.BaseRotateStart.setText('0.0')
 		self.BaseRotateEnd.setText('180.0')
+		self.ElementsPerFaceIn.setText('10')
 
 		vBox = QtGui.QVBoxLayout()
 		hBox0 = QtGui.QHBoxLayout()
-		hBox0.addWidget(QtGui.QLabel("From"))
+		hBox0.addWidget(QtGui.QLabel("From:"))
 		hBox0.addWidget(self.BaseScaleStart)
-		hBox0.addWidget(QtGui.QLabel("To"))
+		hBox0.addWidget(QtGui.QLabel("To:"))
 		hBox0.addWidget(self.BaseScaleEnd)
-		vBox.addWidget(QtGui.QLabel("Base Material Scale"))
+		vBox.addWidget(QtGui.QLabel("Base Material Scale:"))
 		vBox.addLayout(hBox0)
 
 		hBox1 = QtGui.QHBoxLayout()
-		hBox1.addWidget(QtGui.QLabel("From"))
+		hBox1.addWidget(QtGui.QLabel("From:"))
 		hBox1.addWidget(self.BaseRotateStart)
-		hBox1.addWidget(QtGui.QLabel("To"))
+		hBox1.addWidget(QtGui.QLabel("To:"))
 		hBox1.addWidget(self.BaseRotateEnd)
-		vBox.addWidget(QtGui.QLabel("Base Material Rotate (degrees)"))
+		vBox.addWidget(QtGui.QLabel("Base Material Rotate (degrees):"))
 		vBox.addLayout(hBox1)
+
+		hBox2 = QtGui.QHBoxLayout()
+		hBox2.addWidget(QtGui.QLabel("Elements Per Suface face:"))
+		hBox2.addWidget(self.ElementsPerFaceIn)
+		vBox.addLayout(hBox2)
 
 		return vBox
 
@@ -156,6 +163,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.endBaseScale = float(self.BaseScaleEnd.text())
 		self.startBaseRotate = float(self.BaseRotateStart.text())
 		self.endBaseRotate = float(self.BaseRotateEnd.text())
+		self.elementsPerFace = int(self.ElementsPerFaceIn.text())
 		self.clearScene()
 		print 'generating scene with grid size',gridX, gridY, gridZ
 		self.generateWithCubesAndSpheres(gridX, gridY, gridZ)
@@ -184,7 +192,6 @@ class MainWindow(QtGui.QMainWindow):
 			baseScales += [bScaleY]
 		#rScale = self.genRandRange(self.startBaseScale, self.endBaseScale)
 		#sTrans = [ [-((0.5 * rScale) + sRadius), 0.0, 0.0], [(0.5 * rScale) + sRadius, 0.0, 0.0], [0.0, -((0.5 * rScale)+sRadius), 0.0], [0.0, (0.5 * rScale)+sRadius, 0.0], [0.0, 0.0, -((0.5 * rScale)+sRadius)], [0.0, 0.0, (0.5 * rScale+sRadius)] ]
-		elementsPerFace = 10
 		#trans = rScale * 2.0
 		trans = maxTrans * 2.0
 		xTrans = 0.0
@@ -213,7 +220,7 @@ class MainWindow(QtGui.QMainWindow):
 					self.ren.AddActor(m.actor)
 					self.baseModels += [m]
 					for i in range(len(sTrans)):
-						for j in range(elementsPerFace):
+						for j in range(self.elementsPerFace):
 							s = SphereModel()
 							#parent model transform
 							s.translate(xTrans, yTrans, zTrans)
