@@ -21,28 +21,27 @@ class MainWindow(QtGui.QMainWindow):
 		self.frame = QtGui.QFrame()
 
 		self.scan = Scanner()
+		self.scan.notifyProgress.connect(self.onScanProgress)
+		self.scan.notifyFinish.connect(self.onScanFinish)
+
 		self.isSceneGenerated = False
 		self.baseModels = []
 		self.elementModels = []
 
-		self.btnGenScan = QtGui.QPushButton('Generate')
-		self.btnGenScan.clicked.connect(self.generateScan)
-		self.btnScan = QtGui.QPushButton('Start Scan')
-		self.btnScan.clicked.connect(self.runScan)
- 
+
 		self.vl = QtGui.QVBoxLayout()
 		self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
 		self.vl.addWidget(self.vtkWidget)
-		hbox2 = QtGui.QHBoxLayout()
-		hbox3 = QtGui.QHBoxLayout()
-		hbox3.addWidget(self.btnGenScan)
-		hbox3.addWidget(self.btnScan)
-		self.vl.addLayout(self.createGridInput())
-		self.vl.addLayout(self.createDatasetInput())
-		self.vl.addLayout(self.createGenProps())
-		self.vl.addLayout(hbox2)
-		self.vl.addLayout(hbox3)
- 
+
+		hBox = QtGui.QVBoxLayout()
+		hBox.addWidget(self.createGenPropsWidget())
+		hBox.addWidget(self.createScanPropsWidget())
+		self.vl.addLayout(hBox)
+
+		self.genTask = GenerateWithCubesAndSphereThread()
+		self.genTask.notifyProgress.connect(self.onGenProgress)
+		self.genTask.notifyFinish.connect(self.onGenFinish)
+
 		self.ren = vtk.vtkRenderer()
 		self.vtkWidget.GetRenderWindow().AddRenderer(self.ren)
 		self.iren = self.vtkWidget.GetRenderWindow().GetInteractor()
@@ -55,7 +54,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.show()
 		self.iren.Initialize()
 
-	def createGridInput(self):
+	def createGridInputWidget(self):
 		GridStartVal = '2'
 		hBox = QtGui.QHBoxLayout()
 		self.GridXIn = QtGui.QLineEdit()
@@ -73,38 +72,17 @@ class MainWindow(QtGui.QMainWindow):
 		hBox.addWidget(QtGui.QLabel("Z"))
 		hBox.addWidget(self.GridZIn)
 
-		vBox = QtGui.QVBoxLayout()
-		vBox.addWidget(QtGui.QLabel("Grid Size"))
-		vBox.addLayout(hBox)
+		gridGroup = QtGui.QGroupBox('Grid Size')
+		gridGroup.setLayout(hBox)
 
-		return vBox
+		return gridGroup
 
-	def createDatasetInput(self):
+	def createElementTableWidget(self):
+		print 'TODO: create '
+
+	def createGenPropsWidget(self):
 		DsetStartVal = '1000'
-		hBox = QtGui.QHBoxLayout()
-		self.DsetXIn = QtGui.QLineEdit()
-		self.DsetYIn = QtGui.QLineEdit()
-		self.DsetZIn = QtGui.QLineEdit()
-
-		self.DsetXIn.setText(DsetStartVal)
-		self.DsetYIn.setText(DsetStartVal)
-		self.DsetZIn.setText('1')
-
-		hBox.addWidget(QtGui.QLabel("X"))
-		hBox.addWidget(self.DsetXIn)
-		hBox.addWidget(QtGui.QLabel("Y"))
-		hBox.addWidget(self.DsetYIn)
-		#hBox.addWidget(QtGui.QLabel("Z"))
-		#hBox.addWidget(self.DsetZIn)
-
-		vBox = QtGui.QVBoxLayout()
-		vBox.addWidget(QtGui.QLabel("Dataset Size"))
-		vBox.addLayout(hBox)
-
-		return vBox
-
-	def createGenProps(self):
-		DsetStartVal = '1000'
+		vBox0 = QtGui.QVBoxLayout()
 		self.BaseScaleStart = QtGui.QLineEdit()
 		self.BaseScaleEnd = QtGui.QLineEdit()
 		self.BaseRotateStart = QtGui.QLineEdit()
@@ -121,37 +99,106 @@ class MainWindow(QtGui.QMainWindow):
 		self.ElementScaleEnd.setText('0.2')
 		self.ElementsPerFaceIn.setText('10')
 
-		vBox = QtGui.QVBoxLayout()
+		baseGroup = QtGui.QGroupBox("Base Material")
+		vBox1 = QtGui.QVBoxLayout()
 		hBox0 = QtGui.QHBoxLayout()
 		hBox0.addWidget(QtGui.QLabel("From:"))
 		hBox0.addWidget(self.BaseScaleStart)
 		hBox0.addWidget(QtGui.QLabel("To:"))
 		hBox0.addWidget(self.BaseScaleEnd)
-		vBox.addWidget(QtGui.QLabel("Base Material Scale:"))
-		vBox.addLayout(hBox0)
+		vBox1.addWidget(QtGui.QLabel("Scale:"))
+		vBox1.addLayout(hBox0)
 
 		hBox1 = QtGui.QHBoxLayout()
 		hBox1.addWidget(QtGui.QLabel("From:"))
 		hBox1.addWidget(self.BaseRotateStart)
 		hBox1.addWidget(QtGui.QLabel("To:"))
 		hBox1.addWidget(self.BaseRotateEnd)
-		vBox.addWidget(QtGui.QLabel("Base Material Rotate (degrees):"))
-		vBox.addLayout(hBox1)
+		vBox1.addWidget(QtGui.QLabel("Rotate (degrees):"))
+		vBox1.addLayout(hBox1)
 
+		baseGroup.setLayout(vBox1)
+
+		elementGroup = QtGui.QGroupBox("Element Material")
+		vBox2 = QtGui.QVBoxLayout()
 		hBox2 = QtGui.QHBoxLayout()
-		hBox2.addWidget(QtGui.QLabel("Elements Per Suface face:"))
+		hBox2.addWidget(QtGui.QLabel("# Per Suface face:"))
 		hBox2.addWidget(self.ElementsPerFaceIn)
-		vBox.addLayout(hBox2)
+		vBox2.addLayout(hBox2)
 
 		hBox3 = QtGui.QHBoxLayout()
 		hBox3.addWidget(QtGui.QLabel("From:"))
 		hBox3.addWidget(self.ElementScaleStart)
 		hBox3.addWidget(QtGui.QLabel("To:"))
 		hBox3.addWidget(self.ElementScaleEnd)
-		vBox.addWidget(QtGui.QLabel("Element Material Scale:"))
-		vBox.addLayout(hBox3)
+		vBox2.addWidget(QtGui.QLabel("Scale:"))
+		vBox2.addLayout(hBox3)
 
-		return vBox
+		elementGroup.setLayout(vBox2)
+
+		self.btnGenScan = QtGui.QPushButton('Generate')
+		self.btnGenScan.clicked.connect(self.generateScan)
+
+		self.genProgressBar = QtGui.QProgressBar(self)
+		self.genProgressBar.setRange(0,100)
+
+		vBox0.addWidget(self.createGridInputWidget())
+		vBox0.addWidget(baseGroup)
+		vBox0.addWidget(elementGroup)
+		vBox0.addWidget(self.genProgressBar)
+		vBox0.addWidget(self.btnGenScan)
+
+		self.genGroup = QtGui.QGroupBox("Generate Properties")
+		self.genGroup.setLayout(vBox0)
+
+		return self.genGroup
+
+	def createScanTypeWidget(self):
+		print 'TODO: create '
+
+	def createScanPropsWidget(self):
+		DsetStartVal = '1000'
+		hBox = QtGui.QHBoxLayout()
+		self.DsetXIn = QtGui.QLineEdit()
+		self.DsetYIn = QtGui.QLineEdit()
+		self.DsetZIn = QtGui.QLineEdit()
+
+		self.DsetXIn.setText(DsetStartVal)
+		self.DsetYIn.setText(DsetStartVal)
+		self.DsetZIn.setText('1')
+
+		hBox.addWidget(QtGui.QLabel("Width"))
+		hBox.addWidget(self.DsetXIn)
+		hBox.addWidget(QtGui.QLabel("Height"))
+		hBox.addWidget(self.DsetYIn)
+		#hBox.addWidget(QtGui.QLabel("Z"))
+		#hBox.addWidget(self.DsetZIn)
+
+		self.btnStartScan = QtGui.QPushButton('Start Scan')
+		self.btnStartScan.clicked.connect(self.runScan)
+
+		self.btnStopScan = QtGui.QPushButton('Stop Scan')
+		self.btnStopScan.clicked.connect(self.stopScan)
+
+		datasetGroup = QtGui.QGroupBox("Dataset Size")
+		datasetGroup.setLayout(hBox)
+
+		self.scanProgressBar = QtGui.QProgressBar(self)
+		self.scanProgressBar.setRange(0,100)
+
+		hBox2 = QtGui.QHBoxLayout()
+		hBox2.addWidget(self.btnStartScan)
+		hBox2.addWidget(self.btnStopScan)
+
+		vBox = QtGui.QVBoxLayout()
+		vBox.addWidget(datasetGroup)
+		vBox.addWidget(self.scanProgressBar)
+		vBox.addLayout(hBox2)
+
+		self.scanGroup = QtGui.QGroupBox("Scan Properties")
+		self.scanGroup.setLayout(vBox)
+
+		return self.scanGroup
 
 	def addElementActors(self):
 		print 'TODO: add actors'
@@ -164,84 +211,155 @@ class MainWindow(QtGui.QMainWindow):
 			print 'Override current scene?'
 			for m in self.baseModels:
 				self.ren.RemoveActor(m.actor)
+				print 'del m'
 				del m
 			self.baseModels = []
 			for e in self.elementModels:
 				self.ren.RemoveActor(e.actor)
 				del e
 			self.elementModels = []
+			self.iren.Render()
 
+	def onScanProgress(self, i):
+		self.scanProgressBar.setValue(i)
 
-	def generateScan(self):
-		gridX = int(self.GridXIn.text())
-		gridY = int(self.GridYIn.text())
-		gridZ = int(self.GridZIn.text())
-		self.startBaseScale = float(self.BaseScaleStart.text())
-		self.endBaseScale = float(self.BaseScaleEnd.text())
-		self.startBaseRotate = float(self.BaseRotateStart.text())
-		self.endBaseRotate = float(self.BaseRotateEnd.text())
-		self.elementsPerFace = int(self.ElementsPerFaceIn.text())
-		self.startElementScale = float(self.ElementScaleStart.text())
-		self.endElementScale = float(self.ElementScaleEnd.text())
-		self.clearScene()
-		print 'generating scene with grid size',gridX, gridY, gridZ
-		self.generateWithCubesAndSpheres(gridX, gridY, gridZ)
+	def onScanFinish(self):
+		self.genGroup.setEnabled(True)
+		self.btnStartScan.setEnabled(True)
+		print 'Scan Finished'
+
+	def onGenProgress(self, i):
+		self.genProgressBar.setValue(i)
+
+	def onGenFinish(self, baseList, elementList):
+		for m in baseList:
+			self.ren.AddActor(m.actor)
+			self.baseModels += [m]
+		for e in elementList:
+			self.ren.AddActor(e.actor)
+			self.elementModels += [e]
 		self.ren.ResetCamera()
 		self.iren.Render()
 		self.isSceneGenerated = True
+		self.btnGenScan.setEnabled(True)
+		self.scanGroup.setEnabled(True)
 		print 'Finished generating scene'
+
+	def generateScan(self):
+		self.btnGenScan.setEnabled(False)
+		self.scanGroup.setEnabled(False)
+		self.genTask.gridX = int(self.GridXIn.text())
+		self.genTask.gridY = int(self.GridYIn.text())
+		self.genTask.gridZ = int(self.GridZIn.text())
+		self.genTask.startBaseScale = float(self.BaseScaleStart.text())
+		self.genTask.endBaseScale = float(self.BaseScaleEnd.text())
+		self.genTask.startBaseRotate = float(self.BaseRotateStart.text())
+		self.genTask.endBaseRotate = float(self.BaseRotateEnd.text())
+		self.genTask.elementsPerFace = int(self.ElementsPerFaceIn.text())
+		self.genTask.startElementScale = float(self.ElementScaleStart.text())
+		self.genTask.endElementScale = float(self.ElementScaleEnd.text())
+		self.clearScene()
+		#print 'generating scene with grid size',self.gridX, self.gridY, self.gridZ
+		self.genProgressBar.setRange(0, self.genTask.gridX * self.genTask.gridY * self.genTask.gridZ)
+		self.genProgressBar.setValue(0)
+		#self.generateWithCubesAndSpheres()
+		self.genTask.start()
+
+	def stopScan(self):
+		print 'Trying to stop the scan'
+		self.scan.Stop = True
+
+	def runScan(self):
+		dimX = int(self.DsetXIn.text())
+		dimY = int(self.DsetYIn.text())
+		numImages = 90
+		#scene
+		if self.isSceneGenerated:
+			self.genGroup.setEnabled(False)
+			self.btnStartScan.setEnabled(False)
+			#self.scan.exportSceneToHDF('test.h5', self.baseModels, self.elementModels, dimX, dimY)
+			#self.scan.exportTomoScanToHDF('testTomo.h5', self.baseModels, self.elementModels, dimX, dimY, 0.0, 180.0, 180)
+			#self.scan.exportTomoScanToHDF('testTomo.h5', self.baseModels, self.elementModels, dimX, dimY, 45.0, 46.0, 1)
+			self.scan.filename = 'testTomo.h5'
+			self.scan.baseModels = self.baseModels
+			self.scan.elementModels = self.elementModels
+			self.scan.dimX = dimX
+			self.scan.dimY = dimY
+			self.scan.startRot = 0.0
+			self.scan.stopRot = 180.0
+			self.scan.numImages = numImages
+			self.scanProgressBar.setRange(0, numImages)
+			self.scanProgressBar.setValue(0)
+			self.scan.start()
+		else:
+			print 'Please generate a scene first'
+
+class GenerateWithCubesAndSphereThread(QtCore.QThread):
+	notifyProgress = QtCore.pyqtSignal(int)
+	notifyFinish = QtCore.pyqtSignal(list, list)
+
+	def __init__(self):
+		QtCore.QObject.__init__(self)
+		self.gridX = 0
+		self.gridY = 0
+		self.gridZ = 0
+		self.startBaseScale = 1.0
+		self.endBaseScale = 2.0
+		self.startElementScale = 0.2
+		self.endElementScale = 0.5
+		self.startBaseRotate = 0.0
+		self.endBaseRotate = 180.0
+		self.baseModels = []
+		self.elementModels = []
+		self.elementsPerFace = 1
+		self.Stop = False
 
 	def genRandRange(self, start, stop):
 		return start + ( random.random() * (stop - start) )
 
-	def generateWithCubesAndSpheres(self, gridX, gridY, gridZ):
+	def run(self):
+		self.Stop = False
 		random.seed(time.time())
-		#sRadius = 0.5 * 0.2 //when scale is 0.2
 		maxTrans = 0.0
 		baseScales = []
-		for z in range(gridZ):
+		self.baseModels = []
+		self.elementModels = []
+		#generate scales for base elements
+		for z in range(self.gridZ):
 			bScaleY = []
-			for y in range(gridY):
+			for y in range(self.gridY):
 				bScaleX = []
-				for x in range(gridX):
+				for x in range(self.gridX):
 					val = self.genRandRange(self.startBaseScale, self.endBaseScale)
 					maxTrans = max(maxTrans, val)
 					bScaleX += [val]
 				bScaleY += [bScaleX]
 			baseScales += [bScaleY]
-		#rScale = self.genRandRange(self.startBaseScale, self.endBaseScale)
-		#sTrans = [ [-((0.5 * rScale) + sRadius), 0.0, 0.0], [(0.5 * rScale) + sRadius, 0.0, 0.0], [0.0, -((0.5 * rScale)+sRadius), 0.0], [0.0, (0.5 * rScale)+sRadius, 0.0], [0.0, 0.0, -((0.5 * rScale)+sRadius)], [0.0, 0.0, (0.5 * rScale+sRadius)] ]
-		#trans = rScale * 2.0
 		trans = maxTrans * 2.0
 		xTrans = 0.0
 		yTrans = 0.0
 		zTrans = 0.0
-		allBaseItems = gridZ * gridY * gridX
+		allBaseItems = self.gridZ * self.gridY * self.gridX
 		curBaseCnt = 0
 		numFacesOnBase = 6
-		for z in range(gridZ):
+		for z in range(self.gridZ):
 			yTrans = 0.0
-			for y in range(gridY):
+			for y in range(self.gridY):
 				xTrans = 0.0
-				for x in range(gridX):
-					#rev1 sScale = self.genRandRange( self.startElementScale, self.endElementScale ) 
-					#rev1 sRadius = 0.5 * sScale
-					#Rev0 rScale = self.genRandRange(self.startBaseScale, self.endBaseScale)
-					#rev0 sTrans = [ [-0.5 - rScale, 0.0, 0.0], [0.5 + rScale, 0.0, 0.0], [0.0, -0.5 - rScale, 0.0], [0.0, 0.5 + rScale, 0.0], [0.0, 0.0, -0.5 - rScale], [0.0, 0.0, 0.5 + rScale] ]
+				for x in range(self.gridX):
+					if self.Stop:
+						print 'Generator Stopped!'
+						self.notifyFinish.emit([], [])
 					rScale = baseScales[z][y][x]
-					#rev1 sTrans = [ [-((0.5 * rScale) + sRadius), 0.0, 0.0], [(0.5 * rScale) + sRadius, 0.0, 0.0], [0.0, -((0.5 * rScale)+sRadius), 0.0], [0.0, (0.5 * rScale)+sRadius, 0.0], [0.0, 0.0, -((0.5 * rScale)+sRadius)], [0.0, 0.0, (0.5 * rScale+sRadius)] ]
 					m = CubeModel()
 					m.translate(xTrans,  yTrans, zTrans)
-					#xRot = random.random() * 180.0 
-					#yRot = random.random() * 180.0 
-					#zRot = random.random() * 180.0 
 					xRot = self.genRandRange(self.startBaseRotate, self.endBaseRotate )
 					yRot = self.genRandRange(self.startBaseRotate, self.endBaseRotate )
 					zRot = self.genRandRange(self.startBaseRotate, self.endBaseRotate )
 					m.rotate(xRot, yRot, zRot)
 					#print 'rScale', rScale
 					m.scale(rScale, rScale, rScale)
-					self.ren.AddActor(m.actor)
+					#self.ren.AddActor(m.actor)
 					self.baseModels += [m]
 					for i in range(numFacesOnBase):
 						for j in range(self.elementsPerFace):
@@ -273,33 +391,23 @@ class MainWindow(QtGui.QMainWindow):
 								sXTran += random.random() * sTrans[1][0] * op
 							
 							#local transform
-							#s.translate(sTrans[i][0], sTrans[i][1], sTrans[i][2] ) 
 							s.translate(sXTran, sYTran, sZTran ) 
 							s.scale(sScale, sScale, sScale)
 							s.setColor(0.8, 0.2, 0.2)
-							self.ren.AddActor(s.actor)
+							#self.ren.AddActor(s.actor)
 							self.elementModels += [s]
 						#for j
 					#for i
 					xTrans += trans
 					curBaseCnt += 1
 					print 'created item',curBaseCnt, ' of',allBaseItems
+					self.notifyProgress.emit(curBaseCnt)
 				#end for X
 				yTrans += trans
 			#end for Y
 			zTrans += trans
 		#end for Z
+		self.notifyFinish.emit(self.baseModels, self.elementModels)
 		
-
-	def runScan(self):
-		dimX = int(self.DsetXIn.text())
-		dimY = int(self.DsetYIn.text())
-		dimZ = int(self.DsetZIn.text())
-		dimZ = 1
-		#scene
-		if self.isSceneGenerated:
-			self.scan.exportSceneToHDF(self.baseModels, self.elementModels, dimX, dimY)
-		else:
-			print 'Please generate a scene first'
 
 
