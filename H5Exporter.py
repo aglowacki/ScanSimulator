@@ -68,12 +68,10 @@ class H5Exporter:
 			h5st.dset[name] = h5py.h5d.create(prevGrp, genName, h5py.h5t.IEEE_F32LE, h5st.space)
 		h5st.count = (1, dimX, dimY)
 		return h5st
-	def H5_GenDataset(self, fid, datasetName, dimX, dimY, dimZ):
-		print 'starting file ',filename
-		# Create a new file using the default properties.
+	def H5_Gen1DDataset(self, fid, datasetName, dimX):
 		h5st = H5Struct()
 		h5st.fid = fid
-		h5st.dims = (dimZ, dimX, dimY)
+		h5st.dims = (dimX,)
 		h5st.space = h5py.h5s.create_simple(h5st.dims)
 		groups = datasetName.split('/')
 		prevGrp = fid
@@ -87,9 +85,12 @@ class H5Exporter:
 			except:
 				print 'creating grp', grp
 				prevGrp = h5py.h5g.create(prevGrp, grp)
-		h5st.dset[name] = h5py.h5d.create(prevGrp, genName, h5py.h5t.IEEE_F32LE, h5st.space)
-		h5st.count = (1, dimX, dimY)
+		h5st.dset[datasetName] = h5py.h5d.create(prevGrp, genName, h5py.h5t.IEEE_F32LE, h5st.space)
+		h5st.count = (1,)
 		return h5st
+	def H5_SaveDset(self, h5st, dset_name, wdata):
+		print 'saving dataset'
+		h5st.dset[dset_name].write(h5py.h5s.ALL, h5py.h5s.ALL, wdata)
 	def H5_SaveSlice(self, h5st, dset_name, wdata, i):
 		print 'saving slice', i
 		start = (i, 0, 0)
