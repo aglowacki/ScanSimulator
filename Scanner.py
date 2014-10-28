@@ -123,10 +123,10 @@ class Scanner(QtCore.QThread):
 		delta = (math.radians(stopRot) - math.radians(startRot)) / float(numImages)
 		print 'angle',angle,'delta', delta
 		cntr = 1
+		L0Z = minZ - 100
+		L1Z = maxZ + 100
 		for n in range(numImages):
 			print 'Image number',n+1,'of',numImages 
-			L0Z = minZ - 100
-			L1Z = maxZ + 100
 			for y in range(dimY):
 				if self.Stop:
 					print 'Scan Stopped!'
@@ -149,16 +149,16 @@ class Scanner(QtCore.QThread):
 					#	print 'L0',L0,'L1',L1
 					for m in baseModels:
 						wdata[n][y][x] += m.intersect_line(L0, L1)
-					#for e in range(len(elementModels)):
-					#	elementData[0][n][y][x] += elementModels[e].intersect_line(L0, L1)
+					for e in range(len(elementModels)):
+						elementData[0][n][y][x] += elementModels[e].intersect_line(L0, L1)
 			self.notifyProgress.emit(cntr)
 			cntr += 1
 			saver.H5_SaveSlice(h5st, datasetNames[0], wdata, n)
+			saver.H5_SaveSlice(h5st, datasetNames[1], elementData[0], 0)
 			angle += delta
 		#for e in range(len(elementModels)):
 		#	print 'Saving element', e
 		#	saver.H5_SaveSlice(h5st, datasetNames[e], elementData[e], 0)
-		#saver.H5_SaveSlice(h5st, datasetNames[1], elementData[0], 0)
 		saver.H5_End(h5st)
 		self.notifyFinish.emit()
 		print 'finished exporting'

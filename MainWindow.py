@@ -28,15 +28,14 @@ class MainWindow(QtGui.QMainWindow):
 		self.baseModels = []
 		self.elementModels = []
 
-
-		self.vl = QtGui.QVBoxLayout()
+		self.vl = QtGui.QHBoxLayout()
 		self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
 		self.vl.addWidget(self.vtkWidget)
-
-		hBox = QtGui.QVBoxLayout()
-		hBox.addWidget(self.createGenPropsWidget())
-		hBox.addWidget(self.createScanPropsWidget())
-		self.vl.addLayout(hBox)
+		
+		vBox = QtGui.QVBoxLayout()
+		vBox.addWidget(self.createGenPropsWidget())
+		vBox.addWidget(self.createScanPropsWidget())
+		self.vl.addLayout(vBox)
 
 		self.genTask = GenerateWithCubesAndSphereThread()
 		self.genTask.notifyProgress.connect(self.onGenProgress)
@@ -183,6 +182,12 @@ class MainWindow(QtGui.QMainWindow):
 		datasetGroup = QtGui.QGroupBox("Dataset Size")
 		datasetGroup.setLayout(hBox)
 
+		hBox3 = QtGui.QHBoxLayout()
+		self.fileNameIn = QtGui.QLineEdit()
+		self.fileNameIn.setText('TestScan.h5')
+		hBox3.addWidget(QtGui.QLabel('FileName:'))
+		hBox3.addWidget(self.fileNameIn)
+
 		self.scanProgressBar = QtGui.QProgressBar(self)
 		self.scanProgressBar.setRange(0,100)
 
@@ -191,12 +196,15 @@ class MainWindow(QtGui.QMainWindow):
 		hBox2.addWidget(self.btnStopScan)
 
 		vBox = QtGui.QVBoxLayout()
+		vBox.addLayout(hBox3)
 		vBox.addWidget(datasetGroup)
 		vBox.addWidget(self.scanProgressBar)
 		vBox.addLayout(hBox2)
 
 		self.scanGroup = QtGui.QGroupBox("Scan Properties")
 		self.scanGroup.setLayout(vBox)
+
+		self.scanGroup.setEnabled(False)
 
 		return self.scanGroup
 
@@ -272,7 +280,7 @@ class MainWindow(QtGui.QMainWindow):
 	def runScan(self):
 		dimX = int(self.DsetXIn.text())
 		dimY = int(self.DsetYIn.text())
-		numImages = 90
+		numImages = 45
 		#scene
 		if self.isSceneGenerated:
 			self.genGroup.setEnabled(False)
@@ -280,7 +288,7 @@ class MainWindow(QtGui.QMainWindow):
 			#self.scan.exportSceneToHDF('test.h5', self.baseModels, self.elementModels, dimX, dimY)
 			#self.scan.exportTomoScanToHDF('testTomo.h5', self.baseModels, self.elementModels, dimX, dimY, 0.0, 180.0, 180)
 			#self.scan.exportTomoScanToHDF('testTomo.h5', self.baseModels, self.elementModels, dimX, dimY, 45.0, 46.0, 1)
-			self.scan.filename = 'testTomo.h5'
+			self.scan.filename = str(self.fileNameIn.text())
 			self.scan.baseModels = self.baseModels
 			self.scan.elementModels = self.elementModels
 			self.scan.dimX = dimX
@@ -377,18 +385,22 @@ class GenerateWithCubesAndSphereThread(QtCore.QThread):
 							
 							#randomize where on the face we put it
 							if random.random() > 0.5:
-								op = 1
+								op1 = 1
 							else:
-								op = -1
+								op1 = -1
+							if random.random() > 0.5:
+								op2 = 1
+							else:
+								op2 = -1
 							if not sTrans[i][0] == 0.0:
-								sYTran += random.random() * sTrans[1][0] * op
-								sZTran += random.random() * sTrans[1][0] * op
+								sYTran += random.random() * sTrans[1][0] * op1
+								sZTran += random.random() * sTrans[1][0] * op2
 							elif not sTrans[i][1] == 0.0:
-								sXTran += random.random() * sTrans[1][0] * op
-								sZTran += random.random() * sTrans[1][0] * op
+								sXTran += random.random() * sTrans[1][0] * op1
+								sZTran += random.random() * sTrans[1][0] * op2
 							elif not sTrans[i][2] == 0.0:
-								sYTran += random.random() * sTrans[1][0] * op
-								sXTran += random.random() * sTrans[1][0] * op
+								sYTran += random.random() * sTrans[1][0] * op1
+								sXTran += random.random() * sTrans[1][0] * op2
 							
 							#local transform
 							s.translate(sXTran, sYTran, sZTran ) 
