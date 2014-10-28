@@ -154,7 +154,7 @@ class Scanner(QtCore.QThread):
 			self.notifyProgress.emit(cntr)
 			cntr += 1
 			saver.H5_SaveSlice(h5st, datasetNames[0], wdata, n)
-			saver.H5_SaveSlice(h5st, datasetNames[1], elementData[0], 0)
+			saver.H5_SaveSlice(h5st, datasetNames[1], elementData[0], n)
 			angle += delta
 		#for e in range(len(elementModels)):
 		#	print 'Saving element', e

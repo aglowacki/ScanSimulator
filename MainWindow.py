@@ -155,32 +155,60 @@ class MainWindow(QtGui.QMainWindow):
 	def createScanTypeWidget(self):
 		print 'TODO: create '
 
-	def createScanPropsWidget(self):
+	def createDatasetWidget(self):
 		DsetStartVal = '1000'
 		hBox = QtGui.QHBoxLayout()
 		self.DsetXIn = QtGui.QLineEdit()
 		self.DsetYIn = QtGui.QLineEdit()
-		self.DsetZIn = QtGui.QLineEdit()
 
 		self.DsetXIn.setText(DsetStartVal)
 		self.DsetYIn.setText(DsetStartVal)
-		self.DsetZIn.setText('1')
 
 		hBox.addWidget(QtGui.QLabel("Width"))
 		hBox.addWidget(self.DsetXIn)
 		hBox.addWidget(QtGui.QLabel("Height"))
 		hBox.addWidget(self.DsetYIn)
-		#hBox.addWidget(QtGui.QLabel("Z"))
-		#hBox.addWidget(self.DsetZIn)
 
+		datasetGroup = QtGui.QGroupBox("Dataset Size")
+		datasetGroup.setLayout(hBox)
+
+		return datasetGroup
+
+	def createTomoScanWidget(self):
+		self.NumImagesIn = QtGui.QLineEdit()
+		self.StartRotIn = QtGui.QLineEdit()
+		self.StopRotIn = QtGui.QLineEdit()
+		hBox1 = QtGui.QHBoxLayout()
+		hBox2 = QtGui.QHBoxLayout()
+		vBox = QtGui.QVBoxLayout()
+
+		self.NumImagesIn.setText('100')
+		self.StartRotIn.setText('0.0')
+		self.StopRotIn.setText('180.0')
+
+		hBox1.addWidget(QtGui.QLabel('Number Of Images:'))
+		hBox1.addWidget(self.NumImagesIn)
+		
+		hBox2.addWidget(QtGui.QLabel('Start Rotation (degreees):'))
+		hBox2.addWidget(self.StartRotIn)
+		hBox2.addWidget(QtGui.QLabel('Stop Rotation:'))
+		hBox2.addWidget(self.StopRotIn)
+
+		vBox.addLayout(hBox1)
+		vBox.addLayout(hBox2)
+
+		tomoGroup = QtGui.QGroupBox("Tomo Scan")
+		tomoGroup.setLayout(vBox)
+
+		return tomoGroup
+
+
+	def createScanPropsWidget(self):
 		self.btnStartScan = QtGui.QPushButton('Start Scan')
 		self.btnStartScan.clicked.connect(self.runScan)
 
 		self.btnStopScan = QtGui.QPushButton('Stop Scan')
 		self.btnStopScan.clicked.connect(self.stopScan)
-
-		datasetGroup = QtGui.QGroupBox("Dataset Size")
-		datasetGroup.setLayout(hBox)
 
 		hBox3 = QtGui.QHBoxLayout()
 		self.fileNameIn = QtGui.QLineEdit()
@@ -197,7 +225,8 @@ class MainWindow(QtGui.QMainWindow):
 
 		vBox = QtGui.QVBoxLayout()
 		vBox.addLayout(hBox3)
-		vBox.addWidget(datasetGroup)
+		vBox.addWidget(self.createDatasetWidget())
+		vBox.addWidget(self.createTomoScanWidget())
 		vBox.addWidget(self.scanProgressBar)
 		vBox.addLayout(hBox2)
 
@@ -280,7 +309,9 @@ class MainWindow(QtGui.QMainWindow):
 	def runScan(self):
 		dimX = int(self.DsetXIn.text())
 		dimY = int(self.DsetYIn.text())
-		numImages = 45
+		numImages = int(self.NumImagesIn.text())
+		startRot = float(self.StartRotIn.text())
+		stopRot = float(self.StopRotIn.text())
 		#scene
 		if self.isSceneGenerated:
 			self.genGroup.setEnabled(False)
@@ -293,8 +324,8 @@ class MainWindow(QtGui.QMainWindow):
 			self.scan.elementModels = self.elementModels
 			self.scan.dimX = dimX
 			self.scan.dimY = dimY
-			self.scan.startRot = 0.0
-			self.scan.stopRot = 180.0
+			self.scan.startRot = startRot
+			self.scan.stopRot = stopRot
 			self.scan.numImages = numImages
 			self.scanProgressBar.setRange(0, numImages)
 			self.scanProgressBar.setValue(0)
