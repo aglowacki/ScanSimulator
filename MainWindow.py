@@ -11,6 +11,8 @@ from PyQt4 import QtCore, QtGui
 from vtk.qt4.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PrimitiveModels import CubeModel, SphereModel
 from Scanner import Scanner
+from Volumizer import Volumizer
+
 import random, time
  
 class MainWindow(QtGui.QMainWindow):
@@ -23,6 +25,8 @@ class MainWindow(QtGui.QMainWindow):
 		self.scan = Scanner()
 		self.scan.notifyProgress.connect(self.onScanProgress)
 		self.scan.notifyFinish.connect(self.onScanFinish)
+
+		self.volumizer = Volumizer()
 
 		self.isSceneGenerated = False
 		self.baseModels = []
@@ -96,7 +100,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.BaseRotateEnd.setText('180.0')
 		self.ElementScaleStart.setText('0.2')
 		self.ElementScaleEnd.setText('0.2')
-		self.ElementsPerFaceIn.setText('10')
+		self.ElementsPerFaceIn.setText('1')
 
 		baseGroup = QtGui.QGroupBox("Base Material")
 		vBox1 = QtGui.QVBoxLayout()
@@ -306,6 +310,9 @@ class MainWindow(QtGui.QMainWindow):
 		print 'Trying to stop the scan'
 		self.scan.Stop = True
 
+	def runVolumizer(self):
+		self.volumizer.export('myVol', self.baseModels, self.elementModels)
+
 	def runScan(self):
 		dimX = int(self.DsetXIn.text())
 		dimY = int(self.DsetYIn.text())
@@ -406,6 +413,7 @@ class GenerateWithCubesAndSphereThread(QtCore.QThread):
 							sRadius = 0.5 * sScale
 							sTrans = [ [-((0.5 * rScale) + sRadius), 0.0, 0.0], [(0.5 * rScale) + sRadius, 0.0, 0.0], [0.0, -((0.5 * rScale)+sRadius), 0.0], [0.0, (0.5 * rScale)+sRadius, 0.0], [0.0, 0.0, -((0.5 * rScale)+sRadius)], [0.0, 0.0, (0.5 * rScale+sRadius)] ]
 							s = SphereModel()
+							s.density = 2.0
 							#parent model transform
 							s.translate(xTrans, yTrans, zTrans)
 							s.rotate(xRot, yRot, zRot)

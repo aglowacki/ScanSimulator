@@ -53,7 +53,41 @@ class H5Exporter:
 		h5st.space = h5py.h5s.create_simple(h5st.dims)
 		#h5st.dset = h5py.h5d.create(h5st.fid, self.datasetName, h5py.h5t.IEEE_F64LE, h5st.space)
 		for name in datasetNames:
-			h5st.dset[name] = h5py.h5d.create(h5st.fid, name, h5py.h5t.IEEE_F32LE, h5st.space)
+			groups = name.split('/')
+			prevGrp = h5st.fid
+			genName = groups[len(groups)-1]
+			print 'genName' ,genName, 'size', len(groups)
+			for i in range(len(groups) -1):
+				grp = groups[i]
+				try:
+					print 'opening grp', grp
+					prevGrp = h5py.h5g.open(prevGrp, grp)
+				except:
+					print 'creating grp', grp
+					prevGrp = h5py.h5g.create(prevGrp, grp)
+			h5st.dset[name] = h5py.h5d.create(prevGrp, genName, h5py.h5t.IEEE_F32LE, h5st.space)
+		h5st.count = (1, dimX, dimY)
+		return h5st
+	def H5_GenDataset(self, fid, datasetName, dimX, dimY, dimZ):
+		print 'starting file ',filename
+		# Create a new file using the default properties.
+		h5st = H5Struct()
+		h5st.fid = fid
+		h5st.dims = (dimZ, dimX, dimY)
+		h5st.space = h5py.h5s.create_simple(h5st.dims)
+		groups = datasetName.split('/')
+		prevGrp = fid
+		genName = groups[len(groups)-1]
+		print 'genName' ,genName, 'size', len(groups)
+		for i in range(len(groups) -1):
+			grp = groups[i]
+			try:
+				print 'opening grp', grp
+				prevGrp = h5py.h5g.open(prevGrp, grp)
+			except:
+				print 'creating grp', grp
+				prevGrp = h5py.h5g.create(prevGrp, grp)
+		h5st.dset[name] = h5py.h5d.create(prevGrp, genName, h5py.h5t.IEEE_F32LE, h5st.space)
 		h5st.count = (1, dimX, dimY)
 		return h5st
 	def H5_SaveSlice(self, h5st, dset_name, wdata, i):

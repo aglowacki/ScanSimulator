@@ -17,6 +17,9 @@ class Model:
 		self.transform = vtk.vtkTransform()
 		self.transformFilter=vtk.vtkTransformPolyDataFilter()
 		self.transformFilter.SetTransform(self.transform)
+		self.tolerance = 0.00001
+		self.tmut = vtk.mutable(0)
+		self.subId = vtk.mutable(0)
 
 	def Update(self):
 		if not self.source == None:
@@ -51,15 +54,12 @@ class Model:
 	
 	def intersect_line( self, L0, L1 ):
 		dist = 0.0
-		tolerance = 0.00001
-		tmut = vtk.mutable(0)
 		p0 = [0.0, 0.0, 0.0]
 		p1 = [0.0, 0.0, 0.0]
 		pcoords = [0.0, 0.0, 0.0]
-		subId = vtk.mutable(0)
 		i = 0
-		i += self.locator.IntersectWithLine(L0, L1, tolerance, tmut, p0, pcoords, subId)
-		i += self.locator.IntersectWithLine(L1, L0, tolerance, tmut, p1, pcoords, subId)
+		i += self.locator.IntersectWithLine(L0, L1, self.tolerance, self.tmut, p0, pcoords, self.subId)
+		i += self.locator.IntersectWithLine(L1, L0, self.tolerance, self.tmut, p1, pcoords, self.subId)
 		if i == 2:
 			#print p0, p1
 			distSquared = vtk.vtkMath.Distance2BetweenPoints(p0,p1)
