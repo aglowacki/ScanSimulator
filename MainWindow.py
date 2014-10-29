@@ -27,6 +27,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.scan.notifyFinish.connect(self.onScanFinish)
 
 		self.volumizer = Volumizer()
+		self.volumizer.notifyFinish.connect(self.onFinishVolume)
 
 		self.isSceneGenerated = False
 		self.baseModels = []
@@ -370,18 +371,23 @@ class MainWindow(QtGui.QMainWindow):
 		print 'Trying to stop the scan'
 		self.scan.Stop = True
 
+	def onFinishVolume(self):
+		self.btnStartVolume.setEnabled(True)
+		self.genGroup.setEnabled(True)
+		self.scanGroup.setEnabled(True)
+
 	def runVolumizer(self):
 		self.genGroup.setEnabled(False)
 		self.scanGroup.setEnabled(False)
 		self.btnStartVolume.setEnabled(False)
-		dimX = int(self.volDsetXIn.text())
-		dimY = int(self.volDsetYIn.text())
-		dimZ = int(self.volDsetZIn.text())
-		filename = str(self.volFileNameIn.text())
-		self.volumizer.export(filename, self.baseModels, self.elementModels, dimX, dimY, dimZ)
-		self.btnStartVolume.setEnabled(True)
-		self.genGroup.setEnabled(True)
-		self.scanGroup.setEnabled(True)
+		self.volumizer.dimX = int(self.volDsetXIn.text())
+		self.volumizer.dimY = int(self.volDsetYIn.text())
+		self.volumizer.dimZ = int(self.volDsetZIn.text())
+		self.volumizer.filename = str(self.volFileNameIn.text())
+		self.volumizer.baseModels = self.baseModels
+		self.volumizer.elementModels = self.elementModels
+		#self.volumizer.export(filename, self.baseModels, self.elementModels, dimX, dimY, dimZ)
+		self.volumizer.start()
 
 	def runScan(self):
 		dimX = int(self.DsetXIn.text())

@@ -49,6 +49,10 @@ class H5Exporter:
 		# Create a new file using the default properties.
 		h5st = H5Struct()
 		h5st.fid = h5py.h5f.create(filename)
+		dcpl = h5py.h5p.create(h5py.h5p.DATASET_CREATE)
+		cdims = (1, dimX, dimY)
+		dcpl.set_chunk(cdims)
+		dcpl.set_deflate(6)
 		h5st.dims = (dimZ, dimX, dimY)
 		h5st.space = h5py.h5s.create_simple(h5st.dims)
 		#h5st.dset = h5py.h5d.create(h5st.fid, self.datasetName, h5py.h5t.IEEE_F64LE, h5st.space)
@@ -65,7 +69,7 @@ class H5Exporter:
 				except:
 					print 'creating grp', grp
 					prevGrp = h5py.h5g.create(prevGrp, grp)
-			h5st.dset[name] = h5py.h5d.create(prevGrp, genName, h5py.h5t.IEEE_F32LE, h5st.space)
+			h5st.dset[name] = h5py.h5d.create(prevGrp, genName, h5py.h5t.IEEE_F32LE, h5st.space, dcpl, h5py.h5p.DEFAULT)
 		h5st.count = (1, dimX, dimY)
 		return h5st
 	def H5_Gen1DDataset(self, fid, datasetName, dimX):

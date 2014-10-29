@@ -8,10 +8,20 @@ from vtk import *
 import math, time
 from H5Exporter import H5Exporter
 import numpy as np
+from PyQt4 import QtCore
 
-class Volumizer:
+class Volumizer(QtCore.QThread):
+	notifyProgress = QtCore.pyqtSignal(int)
+	notifyFinish = QtCore.pyqtSignal()
+
 	def __init__(self):
-		print 'init'
+		QtCore.QObject.__init__(self)
+		self.filename = 'Volume.h5'
+		self.baseModels = []
+		self.elementModels = []
+		self.dimX = 1000
+		self.dimY = 1000
+		self.dimZ = 1000
 
 	def __export__(self, filename, pd, bounds, dim):
 		whiteImage = vtkImageData()
@@ -22,13 +32,6 @@ class Volumizer:
 		spacing += [abs( bounds[3] - bounds[2] ) / dim[1] ]
 		spacing += [abs( bounds[5] - bounds[4] ) / dim[2] ]
 		print 'spacing', spacing
-		#spacing = [0.5, 0.5, 0.5]
-
-
-		# compute dimensions
-		#dim = []
-		#for i in range(3):
-		#	dim += [ int(math.ceil((bounds[i * 2 + 1] - bounds[i * 2]) / spacing[i])) ]
 
 		whiteImage.SetSpacing(spacing)
 
@@ -139,5 +142,8 @@ class Volumizer:
 
 		saver.H5_End(h5st)
 		print 'Finished export in', int(time.time() - startTime),' seconds'
+		self.notifyFinish.emit()
 
+	def run(self):
+		self.export(self.filename, self.baseModels, self.elementModels, self.dimX, self.dimY, self.dimZ)
 
