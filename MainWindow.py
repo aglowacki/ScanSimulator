@@ -382,16 +382,17 @@ class GenerateWithCubesAndSphereThread(QtCore.QThread):
 				bScaleY += [bScaleX]
 			baseScales += [bScaleY]
 		trans = maxTrans * 2.0
-		xTrans = 0.0
-		yTrans = 0.0
-		zTrans = 0.0
+		xTrans = -(self.gridX * 0.5 * trans * 0.5)
+		yTrans = -(self.gridY * 0.5 * trans * 0.5)
+		zTrans = -(self.gridZ * 0.5 * trans * 0.5)
 		allBaseItems = self.gridZ * self.gridY * self.gridX
+		print 'transes', xTrans, yTrans, zTrans, trans
 		curBaseCnt = 0
 		numFacesOnBase = 6
 		for z in range(self.gridZ):
-			yTrans = 0.0
+			yTrans = -(self.gridY * 0.5 * trans * 0.5)
 			for y in range(self.gridY):
-				xTrans = 0.0
+				xTrans = -(self.gridX * 0.5 * trans * 0.5)
 				for x in range(self.gridX):
 					if self.Stop:
 						print 'Generator Stopped!'

@@ -45,47 +45,35 @@ class Scanner(QtCore.QThread):
 
 		addPolys = vtkAppendPolyData()
 		
-		maxX = sys.float_info.min
-		minX = sys.float_info.max
-		maxY = sys.float_info.min
-		minY = sys.float_info.max
-		maxZ = sys.float_info.min
-		minZ = sys.float_info.max
 		for m in baseModels:
 			addPolys.AddInput(m.transformFilter.GetOutput())
-			b = m.getBounds()
-			print 'bounds', b
-			minX = min(minX, b[0])
-			maxX = max(maxX, b[1])
-			minY = min(minY, b[2])
-			maxY = max(maxY, b[3])
-			minZ = min(minZ, b[4])
-			maxZ = max(maxZ, b[5])
 
 		addPolys.Update()
 		locator = vtkCellLocator()
 		locator.SetDataSet(addPolys.GetOutput())
 		locator.BuildLocator()	
 
+		nbounds = addPolys.GetOutput().GetBounds()
+		bounds = []
+		
 		offset = 2.0
-		minX -= offset
-		minY -= offset
-		minZ -= offset
-		maxX += offset
-		maxY += offset
-		maxZ += offset
-		#maxZ = max(maxX, maxZ) + 100
-		#minZ = min(minX, minZ) + 100
-		print 'bounding box minX',minX,'maxX',maxX,'minY',minY,'maxY',maxY,'minZ',minZ,'maxZ',maxZ
-		xItr = (maxX - minX) / float(dimX)
-		yItr = (maxY - minY) / float(dimY)
+		bounds += [nbounds[0] - offset]
+		bounds += [nbounds[1] + offset]
+		bounds += [nbounds[2] - offset]
+		bounds += [nbounds[3] + offset]
+		bounds += [nbounds[4] - offset]
+		bounds += [nbounds[5] + offset]
+		print 'bounds', bounds
+		
+		xItr = (bounds[1] - bounds[0]) / float(dimX)
+		yItr = (bounds[3] - bounds[2]) / float(dimY)
 		#if starting from 0 we want to go backwards
 		angle = math.radians(startRot)
-		delta = (math.radians(stopRot) - math.radians(startRot)) / float(numImages)
+		delta = (math.radians(stopRot) - math.radians(startRot)) / float(numImages - 1) 
 		print 'angle',angle,'delta', delta
 		cntr = 1
-		L0Z = minZ - 100
-		L1Z = maxZ + 100
+		zStart = bounds[4] - 100
+		zEnd = bounds[5] + 100
 
 		tolerance = 0.00001
 		tmut = mutable(0)
@@ -94,25 +82,28 @@ class Scanner(QtCore.QThread):
 		for n in range(numImages):
 			startTime = time.time()
 			thetaDset[n] = angle
-			print 'Image number',n+1,'of',numImages 
+			print 'Image number',n+1,'of',numImages
+			yStart = bounds[2]
 			for y in range(dimY):
 				if self.Stop:
 					print 'Scan Stopped!'
 					saver.H5_End(h5st)
 					self.notifyFinish.emit()
 					return
-				#print 'Scan line',y+1,'of',dimY
-				L0Y = minY + (yItr * y)
-				L1Y = L0Y
+				xStart = bounds[0] 
 				for x in range(dimX):
-					L0X = minX + (xItr * x)
-					L1X = L0X
+					L0RotX = (zStart * math.sin(angle)) + (xStart * math.cos(angle))
+					L0RotZ = (zStart * math.cos(angle)) - (xStart * math.sin(angle))
+					L1RotX = (zEnd * math.sin(angle)) + (xStart * math.cos(angle))
+					L1RotZ = (zEnd * math.cos(angle)) - (xStart * math.sin(angle))
+					'''
 					L0RotX = (L0Z * math.sin(angle)) + (L0X * math.cos(angle))
 					L0RotZ = (L0Z * math.cos(angle)) - (L0X * math.sin(angle))
 					L1RotX = (L1Z * math.sin(angle)) + (L1X * math.cos(angle))
 					L1RotZ = (L1Z * math.cos(angle)) - (L1X * math.sin(angle))
-					L0 = [L0RotX, L0Y, L0RotZ]
-					L1 = [L1RotX, L1Y, L1RotZ]
+					'''
+					L0 = [L0RotX, yStart, L0RotZ]
+					L1 = [L1RotX, yStart, L1RotZ]
 					
 					p0 = [0.0, 0.0, 0.0]
 					pcoords = [0.0, 0.0, 0.0]
@@ -122,6 +113,8 @@ class Scanner(QtCore.QThread):
 							wdata[n][x][y] += m.intersect_line(L0, L1)
 						for e in range(len(elementModels)):
 							elementData[0][n][x][y] += elementModels[e].intersect_line(L0, L1)
+					xStart += xItr
+				yStart += yItr
 			self.notifyProgress.emit(cntr)
 			cntr += 1
 			saver.H5_SaveSlice(h5st, datasetNames[0], wdata, n)
