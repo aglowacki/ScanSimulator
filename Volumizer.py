@@ -1,27 +1,38 @@
 '''
 Arthur Glowacki
 APS ANL
-10/17/2014
+10/26/2014
 '''
 
 from vtk import *
 import math, time
+from H5Exporter import H5Exporter
+import numpy as np
 
 class Volumizer:
 	def __init__(self):
 		print 'init'
 
-	def __export__(self, filename, pd, spacing):
+	def __export__(self, filename, pd, bounds, dim):
 		whiteImage = vtkImageData()
-		bounds = pd.GetBounds()
+		wdata = np.zeros((dim[2], dim[0], dim[1]), dtype=np.float32)
+		#bounds = pd.GetBounds()
+		spacing = []
+		spacing += [abs( bounds[1] - bounds[0] ) / dim[0] ]
+		spacing += [abs( bounds[3] - bounds[2] ) / dim[1] ]
+		spacing += [abs( bounds[5] - bounds[4] ) / dim[2] ]
+		print 'spacing', spacing
+		#spacing = [0.5, 0.5, 0.5]
+
+
+		# compute dimensions
+		#dim = []
+		#for i in range(3):
+		#	dim += [ int(math.ceil((bounds[i * 2 + 1] - bounds[i * 2]) / spacing[i])) ]
 
 		whiteImage.SetSpacing(spacing)
 
-		# compute dimensions
-		dim = []
-		for i in range(3):
-			dim += [ int(math.ceil((bounds[i * 2 + 1] - bounds[i * 2]) / spacing[i])) ]
-
+		print 'dim',dim
 		whiteImage.SetDimensions(dim)
 		whiteImage.SetExtent(0, dim[0] - 1, 0, dim[1] - 1, 0, dim[2] - 1)
 
@@ -29,13 +40,15 @@ class Volumizer:
 		whiteImage.SetOrigin(origin)
 
 
-		whiteImage.SetScalarTypeToUnsignedChar()
+		#whiteImage.SetScalarTypeToUnsignedChar()
+		whiteImage.SetScalarTypeToFloat()
 		whiteImage.AllocateScalars()
 		#whiteImage.AllocateScalars(VTK_UNSIGNED_CHAR,1);
 		# fill the image with foreground voxels:
-		inval = 255
-		outval = 0
+		inval = 1.0
+		outval = 0.0
 		count = whiteImage.GetNumberOfPoints()
+		print 'count',count
 		for i in range(count):
 			whiteImage.GetPointData().GetScalars().SetTuple1(i, inval)
 
@@ -54,31 +67,77 @@ class Volumizer:
 		imgstenc.ReverseStencilOff()
 		imgstenc.SetBackgroundValue(outval)
 		imgstenc.Update()
- 
-		writer = vtkMetaImageWriter()
-		writer.SetFileName(filename+'.mhd')
-		writer.SetInput(imgstenc.GetOutput())
-		writer.Write()
 
+		d = imgstenc.GetOutput().GetPointData().GetArray(0)
+		#print p
+		#d = whiteImage.GetPointData().GetArray(0)
+		c = 0
+		for z in range(dim[2]):
+			zOf = dim[2] - z - 1
+			for y in range(dim[1]):
+				yOf = dim[1] - y - 1
+				for x in range(dim[0]):
+					wdata[zOf][x][yOf] = d.GetTuple1(c)
+					c+=1
 
-	def export(self, filename, baseModels, elementModels):
+		#writer = vtkMetaImageWriter()
+		#writer.SetFileName(filename+'.mhd')
+		#writer.SetInput(imgstenc.GetOutput())
+		#writer.Write()
+		return wdata
+
+	def export(self, filename, baseModels, elementModels, dimX, dimY, dimZ):
 		print 'Starting export'
 		startTime = time.time()
+
+		datasetNames = ['baseVolume']
+		elementData = []
+		#for i in range(len(elementModels)):
+		for i in range(1):
+			datasetNames += ['elementVolume'+str(i)]
+
+		saver = H5Exporter()
+		h5st = saver.H5_Start(filename, datasetNames, dimX, dimY, dimZ)
+
 		addPolys = vtkAppendPolyData()
 		for m in baseModels:
 			addPolys.AddInput(m.transformFilter.GetOutput())
 		addPolys.Update()
+		
+		nbounds = addPolys.GetOutput().GetBounds()
+		bounds = []
+		
+		offset = 2.0
+		bounds += [nbounds[0] - offset]
+		bounds += [nbounds[1] + offset]
+		bounds += [nbounds[2] - offset]
+		bounds += [nbounds[3] + offset]
+		bounds += [nbounds[4] - offset]
+		bounds += [nbounds[5] + offset]
+		print 'bounds', bounds
+
 		print 'Saving Base'
-		self.__export__('base', addPolys.GetOutput(), [0.5, 0.5, 0.5])
+		wdata = self.__export__('base', addPolys.GetOutput(), bounds, [dimX, dimY, dimZ])
 		del addPolys
 
+		for z in range(dimZ):
+			saver.H5_SaveSlice(h5st, datasetNames[0], wdata, z)
+		del wdata
+
+
+		#todo for loop for elements
 		addPolys2 = vtkAppendPolyData()
 		for m in elementModels:
 			addPolys2.AddInput(m.transformFilter.GetOutput())
 		addPolys2.Update()
 		print 'Saving Elements'
-		self.__export__('element', addPolys2.GetOutput(), [0.5, 0.5, 0.5])
+		wdata = self.__export__('element', addPolys2.GetOutput(), bounds, [dimX, dimY, dimZ])
 
+		for z in range(dimZ):
+			saver.H5_SaveSlice(h5st, datasetNames[1], wdata, z)
+		del wdata
+
+		saver.H5_End(h5st)
 		print 'Finished export in', int(time.time() - startTime),' seconds'
 
 

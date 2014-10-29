@@ -39,6 +39,7 @@ class MainWindow(QtGui.QMainWindow):
 		vBox = QtGui.QVBoxLayout()
 		vBox.addWidget(self.createGenPropsWidget())
 		vBox.addWidget(self.createScanPropsWidget())
+		vBox.addWidget(self.createVolumePropsWidget())
 		self.vl.addLayout(vBox)
 
 		self.genTask = GenerateWithCubesAndSphereThread()
@@ -178,6 +179,29 @@ class MainWindow(QtGui.QMainWindow):
 
 		return datasetGroup
 
+	def createVolDatasetWidget(self):
+		DsetStartVal = '1000'
+		hBox = QtGui.QHBoxLayout()
+		self.volDsetXIn = QtGui.QLineEdit()
+		self.volDsetYIn = QtGui.QLineEdit()
+		self.volDsetZIn = QtGui.QLineEdit()
+
+		self.volDsetXIn.setText(DsetStartVal)
+		self.volDsetYIn.setText(DsetStartVal)
+		self.volDsetZIn.setText(DsetStartVal)
+
+		hBox.addWidget(QtGui.QLabel("Width"))
+		hBox.addWidget(self.volDsetXIn)
+		hBox.addWidget(QtGui.QLabel("Height"))
+		hBox.addWidget(self.volDsetYIn)
+		hBox.addWidget(QtGui.QLabel("Depth"))
+		hBox.addWidget(self.volDsetZIn)
+
+		datasetGroup = QtGui.QGroupBox("Volume Size")
+		datasetGroup.setLayout(hBox)
+
+		return datasetGroup
+
 	def createTomoScanWidget(self):
 		self.NumImagesIn = QtGui.QLineEdit()
 		self.StartRotIn = QtGui.QLineEdit()
@@ -241,6 +265,39 @@ class MainWindow(QtGui.QMainWindow):
 
 		return self.scanGroup
 
+	def createVolumePropsWidget(self):
+		self.btnStartVolume = QtGui.QPushButton('Export Volume')
+		self.btnStartVolume.clicked.connect(self.runVolumizer)
+
+		self.btnStopVolume = QtGui.QPushButton('Stop')
+		#self.btnStopVolume.clicked.connect(self.stopScan)
+
+		hBox3 = QtGui.QHBoxLayout()
+		self.volFileNameIn = QtGui.QLineEdit()
+		self.volFileNameIn.setText('Volume.h5')
+		hBox3.addWidget(QtGui.QLabel('FileName:'))
+		hBox3.addWidget(self.volFileNameIn)
+
+		#self.volProgressBar = QtGui.QProgressBar(self)
+		#self.volProgressBar.setRange(0,100)
+
+		hBox2 = QtGui.QHBoxLayout()
+		hBox2.addWidget(self.btnStartVolume)
+		hBox2.addWidget(self.btnStopVolume)
+
+		vBox = QtGui.QVBoxLayout()
+		vBox.addLayout(hBox3)
+		vBox.addWidget(self.createVolDatasetWidget())
+		#vBox.addWidget(self.volProgressBar)
+		vBox.addLayout(hBox2)
+
+		self.volGroup = QtGui.QGroupBox("Volume Properties")
+		self.volGroup.setLayout(vBox)
+
+		self.volGroup.setEnabled(False)
+
+		return self.volGroup
+
 	def addElementActors(self):
 		print 'TODO: add actors'
 
@@ -266,6 +323,7 @@ class MainWindow(QtGui.QMainWindow):
 
 	def onScanFinish(self):
 		self.genGroup.setEnabled(True)
+		self.volGroup.setEnabled(True)
 		self.btnStartScan.setEnabled(True)
 		print 'Scan Finished'
 
@@ -284,11 +342,13 @@ class MainWindow(QtGui.QMainWindow):
 		self.isSceneGenerated = True
 		self.btnGenScan.setEnabled(True)
 		self.scanGroup.setEnabled(True)
+		self.volGroup.setEnabled(True)
 		print 'Finished generating scene'
 
 	def generateScan(self):
 		self.btnGenScan.setEnabled(False)
 		self.scanGroup.setEnabled(False)
+		self.volGroup.setEnabled(False)
 		self.genTask.gridX = int(self.GridXIn.text())
 		self.genTask.gridY = int(self.GridYIn.text())
 		self.genTask.gridZ = int(self.GridZIn.text())
@@ -311,7 +371,17 @@ class MainWindow(QtGui.QMainWindow):
 		self.scan.Stop = True
 
 	def runVolumizer(self):
-		self.volumizer.export('myVol', self.baseModels, self.elementModels)
+		self.genGroup.setEnabled(False)
+		self.scanGroup.setEnabled(False)
+		self.btnStartVolume.setEnabled(False)
+		dimX = int(self.volDsetXIn.text())
+		dimY = int(self.volDsetYIn.text())
+		dimZ = int(self.volDsetZIn.text())
+		filename = str(self.volFileNameIn.text())
+		self.volumizer.export(filename, self.baseModels, self.elementModels, dimX, dimY, dimZ)
+		self.btnStartVolume.setEnabled(True)
+		self.genGroup.setEnabled(True)
+		self.scanGroup.setEnabled(True)
 
 	def runScan(self):
 		dimX = int(self.DsetXIn.text())
@@ -322,6 +392,7 @@ class MainWindow(QtGui.QMainWindow):
 		#scene
 		if self.isSceneGenerated:
 			self.genGroup.setEnabled(False)
+			self.volGroup.setEnabled(False)
 			self.btnStartScan.setEnabled(False)
 			#self.scan.exportSceneToHDF('test.h5', self.baseModels, self.elementModels, dimX, dimY)
 			#self.scan.exportTomoScanToHDF('testTomo.h5', self.baseModels, self.elementModels, dimX, dimY, 0.0, 180.0, 180)

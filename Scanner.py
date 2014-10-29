@@ -92,6 +92,7 @@ class Scanner(QtCore.QThread):
 			print 'Image number',n+1,'of',numImages
 			yStart = bounds[2]
 			for y in range(dimY):
+				#print 'scan line', y
 				if self.Stop:
 					print 'Scan Stopped!'
 					saver.H5_End(h5st)
