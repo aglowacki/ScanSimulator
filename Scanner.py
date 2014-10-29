@@ -27,6 +27,20 @@ class Scanner(QtCore.QThread):
 		self.numImages = 180
 		self.Stop = False
 
+	def initLocator(self, models):
+		polys = vtkAppendPolyData()
+		
+		for m in models:
+			polys.AddInput(m.transformFilter.GetOutput())
+
+		polys.Update()
+		locator = vtkCellLocator()
+		locator.SetDataSet(polys.GetOutput())
+		locator.BuildLocator()
+
+		return locator, polys.GetOutput().GetBounds()
+		
+
 	def exportTomoScanToHDF(self, filename, baseModels, elementModels, dimX, dimY, startRot, stopRot, numImages):
 		print 'exporting tomo scan'
 		saveVal = 1
@@ -41,19 +55,12 @@ class Scanner(QtCore.QThread):
 		thetaDset = np.zeros((numImages), dtype=np.float32)
 		saver = H5Exporter()
 		h5st = saver.H5_Start(filename, datasetNames, dimX, dimY, numImages)
+		#create theta rotation dataset
 		thetaH5st = saver.H5_Gen1DDataset(h5st.fid, 'exchange/theta', numImages)
 
-		addPolys = vtkAppendPolyData()
-		
-		for m in baseModels:
-			addPolys.AddInput(m.transformFilter.GetOutput())
+		baseLocator, nbounds = self.initLocator(baseModels)
+		elementLocator, ebounds = self.initLocator(elementModels)
 
-		addPolys.Update()
-		locator = vtkCellLocator()
-		locator.SetDataSet(addPolys.GetOutput())
-		locator.BuildLocator()	
-
-		nbounds = addPolys.GetOutput().GetBounds()
 		bounds = []
 		
 		offset = 2.0
@@ -69,7 +76,7 @@ class Scanner(QtCore.QThread):
 		yItr = (bounds[3] - bounds[2]) / float(dimY)
 		#if starting from 0 we want to go backwards
 		angle = math.radians(startRot)
-		delta = (math.radians(stopRot) - math.radians(startRot)) / float(numImages - 1) 
+		delta = (math.radians(stopRot) - math.radians(startRot)) / float(numImages) 
 		print 'angle',angle,'delta', delta
 		cntr = 1
 		zStart = bounds[4] - 100
@@ -96,21 +103,16 @@ class Scanner(QtCore.QThread):
 					L0RotZ = (zStart * math.cos(angle)) - (xStart * math.sin(angle))
 					L1RotX = (zEnd * math.sin(angle)) + (xStart * math.cos(angle))
 					L1RotZ = (zEnd * math.cos(angle)) - (xStart * math.sin(angle))
-					'''
-					L0RotX = (L0Z * math.sin(angle)) + (L0X * math.cos(angle))
-					L0RotZ = (L0Z * math.cos(angle)) - (L0X * math.sin(angle))
-					L1RotX = (L1Z * math.sin(angle)) + (L1X * math.cos(angle))
-					L1RotZ = (L1Z * math.cos(angle)) - (L1X * math.sin(angle))
-					'''
 					L0 = [L0RotX, yStart, L0RotZ]
 					L1 = [L1RotX, yStart, L1RotZ]
 					
 					p0 = [0.0, 0.0, 0.0]
 					pcoords = [0.0, 0.0, 0.0]
-					if locator.IntersectWithLine(L0, L1, tolerance, tmut, p0, pcoords, subId) > 0:
+					if baseLocator.IntersectWithLine(L0, L1, tolerance, tmut, p0, pcoords, subId) > 0:
 						#print 'L0',L0,'L1',L1
 						for m in baseModels:
 							wdata[n][x][y] += m.intersect_line(L0, L1)
+					if elementLocator.IntersectWithLine(L0, L1, tolerance, tmut, p0, pcoords, subId) > 0:
 						for e in range(len(elementModels)):
 							elementData[0][n][x][y] += elementModels[e].intersect_line(L0, L1)
 					xStart += xItr
