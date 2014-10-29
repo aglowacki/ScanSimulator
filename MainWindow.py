@@ -36,12 +36,20 @@ class MainWindow(QtGui.QMainWindow):
 		self.vl = QtGui.QHBoxLayout()
 		self.vtkWidget = QVTKRenderWindowInteractor(self.frame)
 		self.vl.addWidget(self.vtkWidget)
-		
+
+		tab_widget = QtGui.QTabWidget()
+		tab_widget.addTab(self.createGenPropsWidget(), "Generate")
+		tab_widget.addTab(self.createScanPropsWidget(), "Scan")
+		tab_widget.addTab(self.createVolumePropsWidget(), "Volume")
+		self.vl.addWidget(tab_widget)
+
+		'''
 		vBox = QtGui.QVBoxLayout()
 		vBox.addWidget(self.createGenPropsWidget())
 		vBox.addWidget(self.createScanPropsWidget())
 		vBox.addWidget(self.createVolumePropsWidget())
 		self.vl.addLayout(vBox)
+		'''
 
 		self.genTask = GenerateWithCubesAndSphereThread()
 		self.genTask.notifyProgress.connect(self.onGenProgress)
@@ -284,7 +292,7 @@ class MainWindow(QtGui.QMainWindow):
 
 		hBox2 = QtGui.QHBoxLayout()
 		hBox2.addWidget(self.btnStartVolume)
-		hBox2.addWidget(self.btnStopVolume)
+		#hBox2.addWidget(self.btnStopVolume)
 
 		vBox = QtGui.QVBoxLayout()
 		vBox.addLayout(hBox3)
