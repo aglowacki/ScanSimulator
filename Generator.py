@@ -4,12 +4,12 @@ APS ANL
 10/30/2014
 '''
 from PyQt4 import QtCore
-import random, time
+import random, time, math
 from PrimitiveModels import CubeModel, SphereModel
 
 class GenerateWithCubesAndSphereThread(QtCore.QThread):
 	notifyProgress = QtCore.pyqtSignal(int)
-	notifyFinish = QtCore.pyqtSignal(list)
+	notifyFinish = QtCore.pyqtSignal(list, list)
 
 	def __init__(self):
 		QtCore.QObject.__init__(self)
@@ -41,16 +41,21 @@ class GenerateWithCubesAndSphereThread(QtCore.QThread):
 		return (r,g,b)
 
 	def run(self):
+		bounds = [0.,0.,0.,0.,0.,0.]
 		self.Stop = False
 		random.seed(time.time())
 		maxTrans = 0.0
 		baseScales = []
-		self.allModelList = []
+		self.allModelList = [list()]
 		colorList = [(1., 1., 1.), (1., 0.2, 0.2), (0.2, 0.2, 1.), (0.2, 1., 0.2), (1., 1., 0.2), (0.5, 0.0, 1.0), (1.0, 0.2, 1.0) ]
 		addColorCnt = self.numElements - (len(colorList) - 1)
 		for i in range(addColorCnt):
 			colorList += [self.genColor()]
-		for i in range(self.numElements+1):
+		if self.elementsPerFace == 0 or self.numElements == 0:
+			self.elementsPerFace = 0
+			self.numElements == 0
+
+		for i in range(self.numElements):
 			self.allModelList.append(list())
 		#print 'colorlist ',colorList
 		#generate scales for base elements
@@ -90,6 +95,13 @@ class GenerateWithCubesAndSphereThread(QtCore.QThread):
 					#print 'rScale', rScale
 					m.scale(rScale, rScale, rScale)
 					#self.ren.AddActor(m.actor)
+					bnds = m.transformFilter.GetOutput().GetBounds()
+					bounds[0] = min(bounds[0], bnds[0])
+					bounds[1] = max(bounds[1], bnds[1])
+					bounds[2] = min(bounds[2], bnds[2])
+					bounds[3] = max(bounds[3], bnds[3])
+					bounds[4] = min(bounds[4], bnds[4])
+					bounds[5] = max(bounds[5], bnds[5])
 					self.allModelList[0] += [m]
 					for i in range(numFacesOnBase):
 						for j in range(self.elementsPerFace):
@@ -133,6 +145,13 @@ class GenerateWithCubesAndSphereThread(QtCore.QThread):
 							s.setColorT(colorList[element])
 							#self.ren.AddActor(s.actor)
 							#print 'gen element',element
+							bnds = s.transformFilter.GetOutput().GetBounds()
+							bounds[0] = min(bounds[0], bnds[0])
+							bounds[1] = max(bounds[1], bnds[1])
+							bounds[2] = min(bounds[2], bnds[2])
+							bounds[3] = max(bounds[3], bnds[3])
+							bounds[4] = min(bounds[4], bnds[4])
+							bounds[5] = max(bounds[5], bnds[5])
 							self.allModelList[element] += [s]
 						#for j
 					#for i
@@ -145,7 +164,19 @@ class GenerateWithCubesAndSphereThread(QtCore.QThread):
 			#end for Y
 			zTrans += trans
 		#end for Z
-		self.notifyFinish.emit(self.allModelList)
+		xd = bounds[1] - bounds[0]
+		zd = bounds[5] - bounds[4]
+		offset = math.sqrt( (xd * xd) + (zd * zd) )
+		#print 'xd',xd,'zd',zd,'offset',offset
+		offset = (offset - xd) * 0.5
+		bounds[0] -= offset
+		bounds[1] += offset
+		bounds[2] -= offset
+		bounds[3] += offset
+		bounds[4] -= offset
+		bounds[5] += offset
+		#print 'offset',offset
+		self.notifyFinish.emit(self.allModelList, bounds)
 		
 
 

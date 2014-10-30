@@ -23,14 +23,14 @@ class Volumizer(QtCore.QThread):
 		self.dimZ = 1000
 		self.bounds = []
 
-	def __export__(self, pd, bounds, dim):
+	def __export__(self, pd, dim):
 		whiteImage = vtkImageData()
 		wdata = np.zeros((dim[2], dim[0], dim[1]), dtype=np.float32)
 		#bounds = pd.GetBounds()
 		spacing = []
-		spacing += [abs( bounds[1] - bounds[0] ) / dim[0] ]
-		spacing += [abs( bounds[3] - bounds[2] ) / dim[1] ]
-		spacing += [abs( bounds[5] - bounds[4] ) / dim[2] ]
+		spacing += [abs( self.bounds[1] - self.bounds[0] ) / dim[0] ]
+		spacing += [abs( self.bounds[3] - self.bounds[2] ) / dim[1] ]
+		spacing += [abs( self.bounds[5] - self.bounds[4] ) / dim[2] ]
 		print 'spacing', spacing
 
 		whiteImage.SetSpacing(spacing)
@@ -39,7 +39,7 @@ class Volumizer(QtCore.QThread):
 		whiteImage.SetDimensions(dim)
 		whiteImage.SetExtent(0, dim[0] - 1, 0, dim[1] - 1, 0, dim[2] - 1)
 
-		origin = [ bounds[0] + spacing[0] / 2 , bounds[2] + spacing[1] / 2, bounds[4] + spacing[2] / 2 ]
+		origin = [ self.bounds[0] + spacing[0] / 2 , self.bounds[2] + spacing[1] / 2, self.bounds[4] + spacing[2] / 2 ]
 		whiteImage.SetOrigin(origin)
 
 
@@ -89,9 +89,9 @@ class Volumizer(QtCore.QThread):
 		print 'Starting export'
 		startTime = time.time()
 
+		count = len(self.allModelList)
 		datasetNames = ['baseVolume']
-		#for i in range(len(elementModels)):
-		for i in range(1):
+		for i in range(count - 1):
 			datasetNames += ['elementVolume'+str(i)]
 
 		saver = H5Exporter()
@@ -103,7 +103,7 @@ class Volumizer(QtCore.QThread):
 			for m in self.allModelList[i]:
 				addPolys.AddInput(m.transformFilter.GetOutput())
 			addPolys.Update()
-		
+			'''
 			nbounds = addPolys.GetOutput().GetBounds()
 			bounds = []
 		
@@ -115,10 +115,10 @@ class Volumizer(QtCore.QThread):
 			bounds += [nbounds[4] - offset]
 			bounds += [nbounds[5] + offset]
 			print 'bounds', bounds
-
+			'''
 			print 'Exporting',i+1,'of',count
 			startExport = time.time()
-			wdata = self.__export__(addPolys.GetOutput(), bounds, [self.dimX, self.dimY, self.dimZ])
+			wdata = self.__export__(addPolys.GetOutput(), [self.dimX, self.dimY, self.dimZ])
 			del addPolys
 			print 'Finished export in', int(time.time() - startExport),'seconds'
 

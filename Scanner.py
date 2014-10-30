@@ -28,6 +28,7 @@ class Scanner(QtCore.QThread):
 		self.saver = None
 		self.h5st = None
 		self.bSaveTheta = False
+		self.bounds = []
 
 	def initLocator(self):
 		polys = vtkAppendPolyData()
@@ -53,6 +54,7 @@ class Scanner(QtCore.QThread):
 			thetaH5st = self.saver.H5_Gen1DDataset(self.h5st.fid, 'exchange/theta', self.numImages)
 
 		baseLocator, nbounds = self.initLocator()
+		'''
 		bounds = []
 		offset = 2.0
 		bounds += [nbounds[0] - offset]
@@ -62,16 +64,17 @@ class Scanner(QtCore.QThread):
 		bounds += [nbounds[4] - offset]
 		bounds += [nbounds[5] + offset]
 		#print 'bounds', bounds
-		
-		xItr = (bounds[1] - bounds[0]) / float(self.dimX)
-		yItr = (bounds[3] - bounds[2]) / float(self.dimY)
+		'''
+
+		xItr = (self.bounds[1] - self.bounds[0]) / float(self.dimX)
+		yItr = (self.bounds[3] - self.bounds[2]) / float(self.dimY)
 		#if starting from 0 we want to go backwards
 		angle = math.radians(self.startRot)
 		delta = (math.radians(self.stopRot) - math.radians(self.startRot)) / float(self.numImages) 
 		#print 'angle',angle,'delta', delta
 		cntr = 1
-		zStart = bounds[4] - 100
-		zEnd = bounds[5] + 100
+		zStart = self.bounds[4] - 100
+		zEnd = self.bounds[5] + 100
 
 		tolerance = 0.00001
 		tmut = mutable(0)
@@ -82,14 +85,14 @@ class Scanner(QtCore.QThread):
 			if self.bSaveTheta:
 				thetaDset[n] = angle
 			print self.datasetName,'Image number',n+1,'of',self.numImages
-			yStart = bounds[2]
+			yStart = self.bounds[2]
 			for y in range(self.dimY):
 				#print 'scan line', y
 				if self.Stop:
 					print self.datasetName,'Scan Stopped!'
 					self.notifyFinish.emit()
 					return
-				xStart = bounds[0] 
+				xStart = self.bounds[0] 
 				for x in range(self.dimX):
 					L0RotX = (zStart * math.sin(angle)) + (xStart * math.cos(angle))
 					L0RotZ = (zStart * math.cos(angle)) - (xStart * math.sin(angle))

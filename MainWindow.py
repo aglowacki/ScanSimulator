@@ -348,10 +348,11 @@ class MainWindow(QtGui.QMainWindow):
 	def onGenProgress(self, i):
 		self.genProgressBar.setValue(i)
 
-	def onGenFinish(self, allModelList):
+	def onGenFinish(self, allModelList, bounds):
 		for mList in allModelList:
 			for m in mList:
 				self.ren.AddActor(m.actor)
+		self.sceneBounds = bounds
 		self.allModelList = allModelList
 		self.ren.ResetCamera()
 		self.iren.Render()
@@ -397,6 +398,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.genGroup.setEnabled(False)
 		self.scanGroup.setEnabled(False)
 		self.btnStartVolume.setEnabled(False)
+		self.volumizer.bounds = self.sceneBounds
 		self.volumizer.dimX = int(self.volDsetXIn.text())
 		self.volumizer.dimY = int(self.volDsetYIn.text())
 		self.volumizer.dimZ = int(self.volDsetZIn.text())
@@ -438,6 +440,7 @@ class MainWindow(QtGui.QMainWindow):
 				self.scanners[i].h5st = self.h5st
 				self.scanners[i].datasetName = datasetNames[i]
 				self.scanners[i].baseModels = self.allModelList[i]
+				self.scanners[i].bounds = self.sceneBounds
 				self.scanners[i].dimX = dimX
 				self.scanners[i].dimY = dimY
 				self.scanners[i].startRot = startRot

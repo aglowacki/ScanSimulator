@@ -2,3 +2,4 @@
 Required packages:
 	conda install pyopengl
 	conda install vtk
+	conda install h5py
