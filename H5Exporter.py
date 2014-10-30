@@ -7,6 +7,7 @@ APS ANL
 import sys
 import numpy as np
 import h5py
+from PyQt4 import QtCore
 
 class H5Struct:
 	def __init__(self):
@@ -15,6 +16,7 @@ class H5Struct:
 		self.space = None
 		self.count = None
 		self.fid = None
+		self.mutex = QtCore.QMutex()
 
 class H5Exporter:
 	def __init__(self):
@@ -93,13 +95,17 @@ class H5Exporter:
 		h5st.count = (1,)
 		return h5st
 	def H5_SaveDset(self, h5st, dset_name, wdata):
+		h5st.mutex.lock()
 		print 'saving dataset'
 		h5st.dset[dset_name].write(h5py.h5s.ALL, h5py.h5s.ALL, wdata)
+		h5st.mutex.unlock()
 	def H5_SaveSlice(self, h5st, dset_name, wdata, i):
+		h5st.mutex.lock()
 		print 'saving slice', i
 		start = (i, 0, 0)
 		h5st.space.select_hyperslab(start, h5st.count, None, None, h5py.h5s.SELECT_SET)
 		h5st.dset[dset_name].write(h5py.h5s.ALL, h5st.space, wdata)
+		h5st.mutex.unlock()
 	def H5_End(self, h5st):
 		del h5st.space
 		for k, v in h5st.dset.iteritems():

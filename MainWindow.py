@@ -12,6 +12,7 @@ from vtk.qt4.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from PrimitiveModels import CubeModel, SphereModel
 from Scanner import Scanner
 from Volumizer import Volumizer
+from H5Exporter import H5Exporter
 
 import random, time
  
@@ -22,9 +23,7 @@ class MainWindow(QtGui.QMainWindow):
  
 		self.frame = QtGui.QFrame()
 
-		self.scan = Scanner()
-		self.scan.notifyProgress.connect(self.onScanProgress)
-		self.scan.notifyFinish.connect(self.onScanFinish)
+		self.scanMutex = QtCore.QMutex()
 
 		self.volumizer = Volumizer()
 		self.volumizer.notifyFinish.connect(self.onFinishVolume)
@@ -42,14 +41,6 @@ class MainWindow(QtGui.QMainWindow):
 		tab_widget.addTab(self.createScanPropsWidget(), "Scan")
 		tab_widget.addTab(self.createVolumePropsWidget(), "Volume")
 		self.vl.addWidget(tab_widget)
-
-		'''
-		vBox = QtGui.QVBoxLayout()
-		vBox.addWidget(self.createGenPropsWidget())
-		vBox.addWidget(self.createScanPropsWidget())
-		vBox.addWidget(self.createVolumePropsWidget())
-		self.vl.addLayout(vBox)
-		'''
 
 		self.genTask = GenerateWithCubesAndSphereThread()
 		self.genTask.notifyProgress.connect(self.onGenProgress)
@@ -103,6 +94,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.ElementScaleStart = QtGui.QLineEdit()
 		self.ElementScaleEnd = QtGui.QLineEdit()
 		self.ElementsPerFaceIn = QtGui.QLineEdit()
+		self.NumElementsIn = QtGui.QLineEdit()
 
 		self.BaseScaleStart.setText('4.0')
 		self.BaseScaleEnd.setText('7.0')
@@ -111,6 +103,18 @@ class MainWindow(QtGui.QMainWindow):
 		self.ElementScaleStart.setText('0.2')
 		self.ElementScaleEnd.setText('0.2')
 		self.ElementsPerFaceIn.setText('1')
+		self.NumElementsIn.setText('1')
+
+		'''
+		self.BaseScaleStart.setFixedWidth(32)
+		self.BaseScaleEnd.setFixedWidth(32)
+		self.BaseRotateStart.setFixedWidth(32)
+		self.BaseRotateEnd.setFixedWidth(32)
+		self.ElementScaleStart.setFixedWidth(32)
+		self.ElementScaleEnd.setFixedWidth(32)
+		self.ElementsPerFaceIn.setFixedWidth(32)
+		self.NumElementsIn.setFixedWidth(32)
+		'''
 
 		baseGroup = QtGui.QGroupBox("Base Material")
 		vBox1 = QtGui.QVBoxLayout()
@@ -135,7 +139,9 @@ class MainWindow(QtGui.QMainWindow):
 		elementGroup = QtGui.QGroupBox("Element Material")
 		vBox2 = QtGui.QVBoxLayout()
 		hBox2 = QtGui.QHBoxLayout()
-		hBox2.addWidget(QtGui.QLabel("# Per Suface face:"))
+		hBox2.addWidget(QtGui.QLabel("Num of different elements:"))
+		hBox2.addWidget(self.NumElementsIn)
+		hBox2.addWidget(QtGui.QLabel("Num Per Suface:"))
 		hBox2.addWidget(self.ElementsPerFaceIn)
 		vBox2.addLayout(hBox2)
 
@@ -328,13 +334,22 @@ class MainWindow(QtGui.QMainWindow):
 			self.iren.Render()
 
 	def onScanProgress(self, i):
-		self.scanProgressBar.setValue(i)
+		self.scanMutex.lock()
+		v = self.scanProgressBar.value()
+		self.scanProgressBar.setValue(v+1)
+		self.scanMutex.unlock()
 
 	def onScanFinish(self):
-		self.genGroup.setEnabled(True)
-		self.volGroup.setEnabled(True)
-		self.btnStartScan.setEnabled(True)
-		print 'Scan Finished'
+		#if all finished then save file
+		self.scanMutex.lock()
+		self.finishedScans += 1
+		if self.finishedScans >= len(self.allModelList):
+			self.saver.H5_End(self.h5st)
+			self.genGroup.setEnabled(True)
+			self.volGroup.setEnabled(True)
+			self.btnStartScan.setEnabled(True)
+			print 'Scan finished in ',int(time.time() - self.startScanTime),' seconds'
+		self.scanMutex.unlock()
 
 	def onGenProgress(self, i):
 		self.genProgressBar.setValue(i)
@@ -377,7 +392,8 @@ class MainWindow(QtGui.QMainWindow):
 
 	def stopScan(self):
 		print 'Trying to stop the scan'
-		self.scan.Stop = True
+		for s in self.scanners:
+			s.Stop = True
 
 	def onFinishVolume(self):
 		self.btnStartVolume.setEnabled(True)
@@ -398,6 +414,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.volumizer.start()
 
 	def runScan(self):
+		self.startScanTime = time.time()
 		dimX = int(self.DsetXIn.text())
 		dimY = int(self.DsetYIn.text())
 		numImages = int(self.NumImagesIn.text())
@@ -408,20 +425,41 @@ class MainWindow(QtGui.QMainWindow):
 			self.genGroup.setEnabled(False)
 			self.volGroup.setEnabled(False)
 			self.btnStartScan.setEnabled(False)
-			#self.scan.exportSceneToHDF('test.h5', self.baseModels, self.elementModels, dimX, dimY)
-			#self.scan.exportTomoScanToHDF('testTomo.h5', self.baseModels, self.elementModels, dimX, dimY, 0.0, 180.0, 180)
-			#self.scan.exportTomoScanToHDF('testTomo.h5', self.baseModels, self.elementModels, dimX, dimY, 45.0, 46.0, 1)
-			self.scan.filename = str(self.fileNameIn.text())
-			self.scan.baseModels = self.baseModels
-			self.scan.elementModels = self.elementModels
-			self.scan.dimX = dimX
-			self.scan.dimY = dimY
-			self.scan.startRot = startRot
-			self.scan.stopRot = stopRot
-			self.scan.numImages = numImages
-			self.scanProgressBar.setRange(0, numImages)
+			self.allModelList = [self.baseModels]
+			if len(self.elementModels) > 0:
+				self.allModelList += [self.elementModels]
+
+			scanCount = len(self.allModelList)
+			#create hdf5 file
+			filename = str(self.fileNameIn.text())
+			datasetNames = ['exchange/data']
+			for i in range(scanCount - 1): 
+				datasetNames += ['exchange/element'+str(i)]
+			self.saver = H5Exporter()
+			self.h5st = self.saver.H5_Start(filename, datasetNames, dimX, dimY, numImages)
+
+			self.scanProgressBar.setRange(0, numImages * scanCount )
 			self.scanProgressBar.setValue(0)
-			self.scan.start()
+
+			self.finishedScans = 0
+
+			self.scanners = []
+			for i in range(scanCount):
+				self.scanners += [Scanner()]
+				self.scanners[i].saver = self.saver
+				self.scanners[i].h5st = self.h5st
+				self.scanners[i].datasetName = datasetNames[i]
+				self.scanners[i].baseModels = self.allModelList[i]
+				self.scanners[i].dimX = dimX
+				self.scanners[i].dimY = dimY
+				self.scanners[i].startRot = startRot
+				self.scanners[i].stopRot = stopRot
+				self.scanners[i].numImages = numImages
+				self.scanners[i].notifyProgress.connect(self.onScanProgress)
+				self.scanners[i].notifyFinish.connect(self.onScanFinish)
+				#We only want the first scanner to save theta
+				self.scanners[0].bSaveTheta = True
+				self.scanners[i].start()
 		else:
 			print 'Please generate a scene first'
 
