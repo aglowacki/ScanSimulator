@@ -46,15 +46,16 @@ class H5Exporter:
 		del dset
 		del fid
 		print 'done'
-	def H5_Start(self, filename, datasetNames, dimX, dimY, dimZ):
+	def H5_Start(self, filename, datasetNames, dimX, dimY, dimZ, comp=True):
 		print 'starting file ',filename
 		# Create a new file using the default properties.
 		h5st = H5Struct()
 		h5st.fid = h5py.h5f.create(filename)
 		dcpl = h5py.h5p.create(h5py.h5p.DATASET_CREATE)
-		cdims = (1, dimX, dimY)
-		dcpl.set_chunk(cdims)
-		dcpl.set_deflate(6)
+		if comp:
+			cdims = (1, dimX, dimY)
+			dcpl.set_chunk(cdims)
+			dcpl.set_deflate(6)
 		h5st.dims = (dimZ, dimX, dimY)
 		h5st.space = h5py.h5s.create_simple(h5st.dims)
 		#h5st.dset = h5py.h5d.create(h5st.fid, self.datasetName, h5py.h5t.IEEE_F64LE, h5st.space)
@@ -106,6 +107,11 @@ class H5Exporter:
 		h5st.space.select_hyperslab(start, h5st.count, None, None, h5py.h5s.SELECT_SET)
 		h5st.dset[dset_name].write(h5py.h5s.ALL, h5st.space, wdata)
 		h5st.mutex.unlock()
+	def H5_EndDset(self, h5st):
+		del h5st.space
+		for k, v in h5st.dset.iteritems():
+			del v
+		del h5st
 	def H5_End(self, h5st):
 		del h5st.space
 		for k, v in h5st.dset.iteritems():

@@ -114,6 +114,7 @@ class Scanner(QtCore.QThread):
 			print self.datasetName, ' ',int(endTime - startTime),'seconds per image'
 		if self.bSaveTheta:
 			self.saver.H5_SaveDset(thetaH5st, 'exchange/theta', thetaDset)
+			self.saver.H5_EndDset(thetaH5st)
 		self.notifyFinish.emit()
 		print self.datasetName,' finished exporting'
 

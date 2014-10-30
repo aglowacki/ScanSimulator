@@ -32,6 +32,9 @@ class Model:
 			self.mapper.SetInputConnection(self.transformFilter.GetOutputPort())
 			self.actor.SetMapper(self.mapper)
 
+	def setColorT(self, t):
+		self.actor.GetProperty().SetColor(t[0], t[1], t[2])
+
 	def setColor(self, r, g, b):
 		self.actor.GetProperty().SetColor(r, g, b)
 

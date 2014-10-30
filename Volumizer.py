@@ -17,13 +17,13 @@ class Volumizer(QtCore.QThread):
 	def __init__(self):
 		QtCore.QObject.__init__(self)
 		self.filename = 'Volume.h5'
-		self.baseModels = []
-		self.elementModels = []
+		self.allModelList = []
 		self.dimX = 1000
 		self.dimY = 1000
 		self.dimZ = 1000
+		self.bounds = []
 
-	def __export__(self, filename, pd, bounds, dim):
+	def __export__(self, pd, bounds, dim):
 		whiteImage = vtkImageData()
 		wdata = np.zeros((dim[2], dim[0], dim[1]), dtype=np.float32)
 		#bounds = pd.GetBounds()
@@ -83,67 +83,56 @@ class Volumizer(QtCore.QThread):
 					wdata[zOf][x][yOf] = d.GetTuple1(c)
 					c+=1
 
-		#writer = vtkMetaImageWriter()
-		#writer.SetFileName(filename+'.mhd')
-		#writer.SetInput(imgstenc.GetOutput())
-		#writer.Write()
 		return wdata
 
-	def export(self, filename, baseModels, elementModels, dimX, dimY, dimZ):
+	def export(self):
 		print 'Starting export'
 		startTime = time.time()
 
 		datasetNames = ['baseVolume']
-		elementData = []
 		#for i in range(len(elementModels)):
 		for i in range(1):
 			datasetNames += ['elementVolume'+str(i)]
 
 		saver = H5Exporter()
-		h5st = saver.H5_Start(filename, datasetNames, dimX, dimY, dimZ)
+		h5st = saver.H5_Start(self.filename, datasetNames, self.dimX, self.dimY, self.dimZ, False)
 
-		addPolys = vtkAppendPolyData()
-		for m in baseModels:
-			addPolys.AddInput(m.transformFilter.GetOutput())
-		addPolys.Update()
+		count = len(self.allModelList)
+		for i in range(count):
+			addPolys = vtkAppendPolyData()
+			for m in self.allModelList[i]:
+				addPolys.AddInput(m.transformFilter.GetOutput())
+			addPolys.Update()
 		
-		nbounds = addPolys.GetOutput().GetBounds()
-		bounds = []
+			nbounds = addPolys.GetOutput().GetBounds()
+			bounds = []
 		
-		offset = 2.0
-		bounds += [nbounds[0] - offset]
-		bounds += [nbounds[1] + offset]
-		bounds += [nbounds[2] - offset]
-		bounds += [nbounds[3] + offset]
-		bounds += [nbounds[4] - offset]
-		bounds += [nbounds[5] + offset]
-		print 'bounds', bounds
+			offset = 2.0
+			bounds += [nbounds[0] - offset]
+			bounds += [nbounds[1] + offset]
+			bounds += [nbounds[2] - offset]
+			bounds += [nbounds[3] + offset]
+			bounds += [nbounds[4] - offset]
+			bounds += [nbounds[5] + offset]
+			print 'bounds', bounds
 
-		print 'Saving Base'
-		wdata = self.__export__('base', addPolys.GetOutput(), bounds, [dimX, dimY, dimZ])
-		del addPolys
+			print 'Exporting',i+1,'of',count
+			startExport = time.time()
+			wdata = self.__export__(addPolys.GetOutput(), bounds, [self.dimX, self.dimY, self.dimZ])
+			del addPolys
+			print 'Finished export in', int(time.time() - startExport),'seconds'
 
-		for z in range(dimZ):
-			saver.H5_SaveSlice(h5st, datasetNames[0], wdata, z)
-		del wdata
-
-
-		#todo for loop for elements
-		addPolys2 = vtkAppendPolyData()
-		for m in elementModels:
-			addPolys2.AddInput(m.transformFilter.GetOutput())
-		addPolys2.Update()
-		print 'Saving Elements'
-		wdata = self.__export__('element', addPolys2.GetOutput(), bounds, [dimX, dimY, dimZ])
-
-		for z in range(dimZ):
-			saver.H5_SaveSlice(h5st, datasetNames[1], wdata, z)
-		del wdata
+			print 'Saving',i,'of',count
+			startSave = time.time()
+			for z in range(self.dimZ):
+				saver.H5_SaveSlice(h5st, datasetNames[i], wdata, z)
+			del wdata
+			print 'Finished save in', int(time.time() - startSave),'seconds'
 
 		saver.H5_End(h5st)
-		print 'Finished export in', int(time.time() - startTime),' seconds'
+		print 'Finished whole volume in', int(time.time() - startTime),' seconds'
 		self.notifyFinish.emit()
 
 	def run(self):
-		self.export(self.filename, self.baseModels, self.elementModels, self.dimX, self.dimY, self.dimZ)
+		self.export()
 
