@@ -92,6 +92,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.ElementScaleEnd = QtGui.QLineEdit()
 		self.ElementsPerFaceIn = QtGui.QLineEdit()
 		self.NumElementsIn = QtGui.QLineEdit()
+		self.UseMultiSpheresChk = QtGui.QCheckBox("MultiSphere element models:")
 
 		self.BaseScaleStart.setText('4.0')
 		self.BaseScaleEnd.setText('7.0')
@@ -101,6 +102,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.ElementScaleEnd.setText('0.2')
 		self.ElementsPerFaceIn.setText('1')
 		self.NumElementsIn.setText('1')
+		self.UseMultiSpheresChk.setChecked(True)
 
 		'''
 		self.BaseScaleStart.setFixedWidth(32)
@@ -141,6 +143,7 @@ class MainWindow(QtGui.QMainWindow):
 		hBox2.addWidget(QtGui.QLabel("Num Per Suface:"))
 		hBox2.addWidget(self.ElementsPerFaceIn)
 		vBox2.addLayout(hBox2)
+		vBox2.addWidget(self.UseMultiSpheresChk)
 
 		hBox3 = QtGui.QHBoxLayout()
 		hBox3.addWidget(QtGui.QLabel("From:"))
@@ -322,7 +325,6 @@ class MainWindow(QtGui.QMainWindow):
 			for mList in self.allModelList:
 				for m in mList:
 					self.ren.RemoveActor(m.actor)
-					print 'del m'
 					del m
 			self.allModelList = []
 			self.iren.Render()
@@ -381,6 +383,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.genTask.elementsPerFace = int(self.ElementsPerFaceIn.text())
 		self.genTask.startElementScale = float(self.ElementScaleStart.text())
 		self.genTask.endElementScale = float(self.ElementScaleEnd.text())
+		self.genTask.useMultiSphereElement = self.UseMultiSpheresChk.isChecked()
 		self.clearScene()
 		#print 'generating scene with grid size',self.gridX, self.gridY, self.gridZ
 		self.genProgressBar.setRange(0, self.genTask.gridX * self.genTask.gridY * self.genTask.gridZ)

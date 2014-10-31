@@ -31,19 +31,22 @@ class SphereModel(Model):
 class MultiSphereModel(Model):
 	def __init__(self, amt, radius):
 		Model.__init__(self)
-		self.source = vtkAppendPolyData()
-		halfRad = radius * 0.5
+		self.source = vtk.vtkAppendPolyData()
 		for i in range(amt):
+			sRad = 0.25 + ( random() * 0.25 )
+			x = float(random() * radius) 
+			y = float(random() * radius)
+			z = float(random() * radius) 
 			s = vtk.vtkSphereSource()
-			s.SetCenter(random() * halfRad, random() * halfRad, random * halfRad)
-			s.SetRadius(0.5)
+			s.SetCenter(x,y,z)
+			s.SetRadius(float(sRad))
 			s.Update()
-			self.source.AddImput(s.GetOutput())
+			self.source.AddInput(s.GetOutput())
 		#add center
 		s = vtk.vtkSphereSource()
 		s.SetCenter(0.0, 0.0, 0.0)
 		s.SetRadius(0.5)
 		s.Update()
-		self.source.AddImput(s.GetOutput())
+		self.source.AddInput(s.GetOutput())
 		self.Update()
 

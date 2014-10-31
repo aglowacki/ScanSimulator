@@ -5,7 +5,7 @@ APS ANL
 '''
 from PyQt4 import QtCore
 import random, time, math
-from PrimitiveModels import CubeModel, SphereModel
+from PrimitiveModels import CubeModel, SphereModel, MultiSphereModel
 
 class GenerateWithCubesAndSphereThread(QtCore.QThread):
 	notifyProgress = QtCore.pyqtSignal(int)
@@ -26,6 +26,8 @@ class GenerateWithCubesAndSphereThread(QtCore.QThread):
 		self.elementsPerFace = 1
 		self.Stop = False
 		self.numElements = 1
+		self.useMultiSphereElement = False
+		self.multiSphereElementAmt = 5
 
 	def genRandRange(self, start, stop):
 		return start + ( random.random() * (stop - start) )
@@ -108,7 +110,11 @@ class GenerateWithCubesAndSphereThread(QtCore.QThread):
 							sScale = self.genRandRange( self.startElementScale, self.endElementScale ) 
 							sRadius = 0.5 * sScale
 							sTrans = [ [-((0.5 * rScale) + sRadius), 0.0, 0.0], [(0.5 * rScale) + sRadius, 0.0, 0.0], [0.0, -((0.5 * rScale)+sRadius), 0.0], [0.0, (0.5 * rScale)+sRadius, 0.0], [0.0, 0.0, -((0.5 * rScale)+sRadius)], [0.0, 0.0, (0.5 * rScale+sRadius)] ]
-							s = SphereModel()
+							if self.useMultiSphereElement:
+								eRad = random.random() * 0.5
+								s = MultiSphereModel(self.multiSphereElementAmt, eRad)
+							else:
+								s = SphereModel()
 							s.density = 2.0
 							#parent model transform
 							s.translate(xTrans, yTrans, zTrans)
