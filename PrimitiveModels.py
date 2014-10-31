@@ -33,10 +33,19 @@ class MultiSphereModel(Model):
 		Model.__init__(self)
 		self.source = vtk.vtkAppendPolyData()
 		for i in range(amt):
+			opX = 1.0
+			opY = 1.0
+			opZ = 1.0
+			if random() > 0.5:
+				opX *= -1.0
+			if random() > 0.5:
+				opY *= -1.0
+			if random() > 0.5:
+				opZ *= -1.0
 			sRad = 0.25 + ( random() * 0.25 )
-			x = float(random() * radius) 
-			y = float(random() * radius)
-			z = float(random() * radius) 
+			x = float(random() * radius) * opX
+			y = float(random() * radius) * opY
+			z = float(random() * radius) * opZ
 			s = vtk.vtkSphereSource()
 			s.SetCenter(x,y,z)
 			s.SetRadius(float(sRad))
