@@ -339,6 +339,10 @@ class MainWindow(QtGui.QMainWindow):
 		self.finishedScans += 1
 		if self.finishedScans >= len(self.allModelList):
 			self.saver.H5_End(self.h5st)
+			del self.h5st
+			del self.saver
+			for s in self.scanners:
+				del s
 			self.genGroup.setEnabled(True)
 			self.volGroup.setEnabled(True)
 			self.btnStartScan.setEnabled(True)

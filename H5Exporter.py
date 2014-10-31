@@ -102,7 +102,7 @@ class H5Exporter:
 		h5st.mutex.unlock()
 	def H5_SaveSlice(self, h5st, dset_name, wdata, i):
 		h5st.mutex.lock()
-		print 'saving slice', i
+		#print 'saving slice', i
 		start = (i, 0, 0)
 		h5st.space.select_hyperslab(start, h5st.count, None, None, h5py.h5s.SELECT_SET)
 		h5st.dset[dset_name].write(h5py.h5s.ALL, h5st.space, wdata)
