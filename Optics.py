@@ -27,13 +27,15 @@ def gen_dist_array(width, height):
 			dist_map[x][y] = distance((x, y), (midX, midY) )
 	return dist_map
 
-def gen_dist_circle_array(width, height, in_dist):
+def gen_dist_circle_array(max_freq, outer_cutoff_freq, inner_cutoff_freq, width, height):
 	midX = width / 2
 	midY = height / 2
 	dist_map = np.zeros((width, height), dtype=np.float32)
 	for y in range(height):
 		for x in range(width):
-			if in_dist > distance((x, y), (midX, midY) ):
+			d = distance((x, y), (midX, midY) ) 
+			d2 = (d / midX) * max_freq #change  from pixels to freq
+			if d2 < outer_cutoff_freq and d > inner_cutoff_freq:
 				dist_map[x][y] = 1.
 	return dist_map
 
@@ -64,17 +66,18 @@ class Objective:
 		self.outer_nm = outer_nm
 		self.inner_nm = inner_nm
 		self.outer_cutoff_freq = 1./(2.e-3 * outer_nm) # in inverse microns
-		self.inner_cutoff_freq = 1./(2.e-3 * inner_nm)
+		#self.inner_cutoff_freq = 1./(2.e-3 * inner_nm)
 		#if self.type:
 		#	self.inner_cutoff_freq = .44/(2.e-3*outer_nm)
 
 		#self.objective_array = np.zeros((width, height), dtype=np.float32)
 		#shift_dist_array = shift(gen_dist_array(width, height))
 		#self.objective_array = max_freq * shift_dist_array
+		#print 'max', max_freq, 'out', self.outer_cutoff_freq, 'in', self.inner_cutoff_freq
 		if bShifted:
-			self.objective_array = shift(gen_dist_circle_array(width, height, width /10))
+			self.objective_array = shift(gen_dist_circle_array(max_freq, self.outer_cutoff_freq, self.inner_cutoff_freq, width, height ))
 		else:
-			self.objective_array = gen_dist_circle_array(width, height, width /2)
+			self.objective_array = gen_dist_circle_array(max_freq, self.outer_cutoff_freq, self.inner_cutoff_freq, width, height )
 
 ######################### OPTICS ###################################
 
@@ -83,16 +86,14 @@ class Optics:
 		self.numCondensers = 1
 
 	def coherent(self, image_array, objective):
-		#shift_objective = shift(objective.objective_array)
 		shift_objective = objective.objective_array #already shifted
 		fft_image = fft2(image_array)
 		fft_image *= shift_objective
 		image_array = ifft2(fft_image)
-		image_array *= np.conj(image_array)
+		#image_array *= np.conj(image_array)
 		return image_array.astype(np.float32)
 
 	def incoherent(self, image_array, objective):
-		#psf = shift(objective.objective_array)
 		psf = ifft2(objective.objective_array) # already shifted
 		psf *= np.conj(psf)
 		otf = fft2(psf)
@@ -113,16 +114,22 @@ if __name__ == '__main__':
 	delta_obj_nm = 1.0
 	max_freq = 1.0 / 2.e-3 * delta_obj_nm
 
-	obj = Objective()
-	obj.generate(max_freq, imageSize, imageSize, 4., 500., True)
+	lenses = [4., 30., 100.]
+	#lenses = [1., 30., 100.]
 
-	condenser = Condenser()
-	condenser.outer_nm = 10.
-	condenser.generate(max_freq, imageSize, imageSize)
+	objs = []
+	for i in range(3):
+		obj = Objective()
+		obj.generate(max_freq, imageSize, imageSize, lenses[i], 500., True)
+		objs += [obj]
+
+	#condenser = Condenser()
+	#condenser.outer_nm = 10.
+	#condenser.generate(max_freq, imageSize, imageSize)
 
 	oCalc = Optics()
-	new_image = oCalc.coherent(image, obj)
-	save_array('shifted_objective.jpg', obj.objective_array)
-	save_array('new_image.jpg', new_image)
-	save_array('lena.jpg', image)
+	for i in range(3):
+		new_image = oCalc.coherent(image, objs[i])
+		save_array('shifted_objective'+str(i)+'.jpg', objs[i].objective_array)
+		save_array('new_image'+str(i)+'.jpg', new_image)
 	print 'done'
