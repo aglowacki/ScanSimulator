@@ -14,6 +14,7 @@ from Volumizer import Volumizer
 from H5Exporter import H5Exporter
 from Generator import GenerateWithCubesAndSphereThread
 import random, time
+import Optics
  
 class MainWindow(QtGui.QMainWindow):
  
@@ -245,6 +246,48 @@ class MainWindow(QtGui.QMainWindow):
 
 		return tomoGroup
 
+	def createLensPropsWidget(self):
+		hBox1 = QtGui.QHBoxLayout()
+		self.deltaNMIn = QtGui.QLineEdit()
+		self.deltaNMIn.setText('1.0')
+		hBox1.addWidget(QtGui.QLabel('Delta nm:'))
+		hBox1.addWidget(self.deltaNMIn)
+
+		vBox1 = QtGui.QVBoxLayout()
+		self.UseObj1Chk = QtGui.QCheckBox("Use")
+		self.UseObj1Chk.setChecked(True)
+		vBox1.addWidget(self.UseObj1Chk)
+		vBox1.addWidget(QtGui.QLabel('Outer nm:'))
+		self.outNM1In = QtGui.QLineEdit()
+		self.outNM1In.setText('4.0')
+		vBox1.addWidget(self.outNM1In)
+
+		vBox2 = QtGui.QVBoxLayout()
+		self.UseObj2Chk = QtGui.QCheckBox("Use")
+		self.UseObj2Chk.setChecked(True)
+		vBox2.addWidget(self.UseObj2Chk)
+		vBox2.addWidget(QtGui.QLabel('Outer nm:'))
+		self.outNM2In = QtGui.QLineEdit()
+		self.outNM2In.setText('30.0')
+		vBox2.addWidget(self.outNM2In)
+
+		vBox3 = QtGui.QVBoxLayout()
+		self.UseObj3Chk = QtGui.QCheckBox("Use")
+		self.UseObj3Chk.setChecked(True)
+		vBox3.addWidget(self.UseObj3Chk)
+		vBox3.addWidget(QtGui.QLabel('Outer nm:'))
+		self.outNM3In = QtGui.QLineEdit()
+		self.outNM3In.setText('100.0')
+		vBox3.addWidget(self.outNM3In)
+		
+		hBox1.addLayout(vBox1)
+		hBox1.addLayout(vBox2)
+		hBox1.addLayout(vBox3)
+
+		group = QtGui.QGroupBox("Objectives")
+		group.setLayout(hBox1)
+
+		return group
 
 	def createScanPropsWidget(self):
 		self.btnStartScan = QtGui.QPushButton('Start Scan')
@@ -269,6 +312,7 @@ class MainWindow(QtGui.QMainWindow):
 		vBox = QtGui.QVBoxLayout()
 		vBox.addLayout(hBox3)
 		vBox.addWidget(self.createDatasetWidget())
+		vBox.addWidget(self.createLensPropsWidget())
 		vBox.addWidget(self.createTomoScanWidget())
 		vBox.addWidget(self.scanProgressBar)
 		vBox.addLayout(hBox2)
@@ -440,9 +484,29 @@ class MainWindow(QtGui.QMainWindow):
 
 			self.finishedScans = 0
 
+			delta_obj_nm = float(self.deltaNMIn.text())
+			max_freq = 1.0 / 2.e-3 * delta_obj_nm
+			objectives = []
+			if self.UseObj1Chk.isChecked():
+				obj = Optics.Objective()
+				val1 = float(self.outNM1In.text())
+				obj.generate(max_freq, dimX, dimY, val1, 500.0, True)
+				objectives += [ obj ]
+			if self.UseObj2Chk.isChecked():
+				obj = Optics.Objective()
+				val1 = float(self.outNM2In.text())
+				obj.generate(max_freq, dimX, dimY, val1, 500.0, True)
+				objectives += [ obj ]
+			if self.UseObj3Chk.isChecked():
+				obj = Optics.Objective()
+				val1 = float(self.outNM3In.text())
+				obj.generate(max_freq, dimX, dimY, val1, 500.0, True)
+				objectives += [ obj ]
+
 			self.scanners = []
 			for i in range(scanCount):
 				self.scanners += [Scanner()]
+				self.scanners[i].objectives = objectives
 				self.scanners[i].saver = self.saver
 				self.scanners[i].h5st = self.h5st
 				self.scanners[i].datasetName = datasetNames[i]

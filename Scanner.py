@@ -10,6 +10,7 @@ import math, time, sys
 from H5Exporter import H5Exporter
 from PyQt4 import QtCore
 from vtk import *
+import Optics
 
 class Scanner(QtCore.QThread):
 	notifyProgress = QtCore.pyqtSignal(int)
@@ -29,6 +30,8 @@ class Scanner(QtCore.QThread):
 		self.h5st = None
 		self.bSaveTheta = False
 		self.bounds = []
+		self.objectives = []
+		self.calc = Optics.Optics()
 
 	def initLocator(self):
 		polys = vtkAppendPolyData()
@@ -54,17 +57,6 @@ class Scanner(QtCore.QThread):
 			thetaH5st = self.saver.H5_Gen1DDataset(self.h5st.fid, 'exchange/theta', self.numImages)
 
 		baseLocator, nbounds = self.initLocator()
-		'''
-		bounds = []
-		offset = 2.0
-		bounds += [nbounds[0] - offset]
-		bounds += [nbounds[1] + offset]
-		bounds += [nbounds[2] - offset]
-		bounds += [nbounds[3] + offset]
-		bounds += [nbounds[4] - offset]
-		bounds += [nbounds[5] + offset]
-		#print 'bounds', bounds
-		'''
 
 		xItr = (self.bounds[1] - self.bounds[0]) / float(self.dimX)
 		yItr = (self.bounds[3] - self.bounds[2]) / float(self.dimY)
@@ -111,6 +103,12 @@ class Scanner(QtCore.QThread):
 				yStart += yItr
 			self.notifyProgress.emit(cntr)
 			cntr += 1
+			'''
+			#perform optics
+			for objIndex in self.objectives:
+				calc.coherent(wdata[n], 
+				#then save
+			'''
 			self.saver.H5_SaveSlice(self.h5st, self.datasetName, wdata, n)
 			angle += delta
 			endTime = time.time()
