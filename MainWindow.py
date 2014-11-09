@@ -11,7 +11,7 @@ from PyQt4 import QtCore, QtGui
 from vtk.qt4.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor
 from Scanner import Scanner
 from Volumizer import Volumizer
-from H5Exporter import H5Exporter
+import h5py
 from Generator import GenerateWithCubesAndSphereThread
 import random, time
 import Optics
@@ -384,9 +384,11 @@ class MainWindow(QtGui.QMainWindow):
 		self.scanMutex.lock()
 		self.finishedScans += 1
 		if self.finishedScans >= len(self.allModelList):
-			self.saver.H5_End(self.h5st)
-			del self.h5st
-			del self.saver
+			self.hfile.close()
+			for i in range(len(self.hdfFiles)):
+				self.hdfFiles[i].close()
+			del self.mutex
+			del self.hfile
 			for s in self.scanners:
 				del s
 			self.genGroup.setEnabled(True)
@@ -476,14 +478,16 @@ class MainWindow(QtGui.QMainWindow):
 			datasetNames = ['exchange/data']
 			for i in range(scanCount - 1): 
 				datasetNames += ['exchange/element'+str(i)]
-			self.saver = H5Exporter()
-			self.h5st = self.saver.H5_Start(filename, datasetNames, dimX, dimY, numImages)
+			self.hfile = h5py.File(filename, 'w', chunks=(1, dimX, dimY))
 
 			self.scanProgressBar.setRange(0, numImages * scanCount )
 			self.scanProgressBar.setValue(0)
 
 			self.finishedScans = 0
 
+			self.mutex = QtCore.QMutex()
+
+			self.hdfFiles = []
 			delta_obj_nm = float(self.deltaNMIn.text())
 			max_freq = 1.0 / 2.e-3 * delta_obj_nm
 			objectives = []
@@ -492,23 +496,27 @@ class MainWindow(QtGui.QMainWindow):
 				val1 = float(self.outNM1In.text())
 				obj.generate(max_freq, dimX, dimY, val1, 500.0, True)
 				objectives += [ obj ]
+				self.hdfFiles += [ h5py.File(filename + str(val1)+'.h5', 'w') ]
 			if self.UseObj2Chk.isChecked():
 				obj = Optics.Objective()
 				val1 = float(self.outNM2In.text())
 				obj.generate(max_freq, dimX, dimY, val1, 500.0, True)
 				objectives += [ obj ]
+				self.hdfFiles += [ h5py.File(filename + str(val1)+'.h5', 'w') ]
 			if self.UseObj3Chk.isChecked():
 				obj = Optics.Objective()
 				val1 = float(self.outNM3In.text())
 				obj.generate(max_freq, dimX, dimY, val1, 500.0, True)
 				objectives += [ obj ]
+				self.hdfFiles += [ h5py.File(filename + str(val1)+'.h5', 'w') ]
 
 			self.scanners = []
 			for i in range(scanCount):
 				self.scanners += [Scanner()]
 				self.scanners[i].objectives = objectives
-				self.scanners[i].saver = self.saver
-				self.scanners[i].h5st = self.h5st
+				self.scanners[i].hdfFiles = self.hdfFiles
+				self.scanners[i].dsetLock = self.mutex
+				self.scanners[i].hfile = self.hfile
 				self.scanners[i].datasetName = datasetNames[i]
 				self.scanners[i].baseModels = self.allModelList[i]
 				self.scanners[i].bounds = self.sceneBounds

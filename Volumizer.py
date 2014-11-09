@@ -6,7 +6,7 @@ APS ANL
 
 from vtk import *
 import math, time
-from H5Exporter import H5Exporter
+import h5py
 import numpy as np
 from PyQt4 import QtCore
 
@@ -23,7 +23,7 @@ class Volumizer(QtCore.QThread):
 		self.dimZ = 1000
 		self.bounds = []
 
-	def __export__(self, pd, dim):
+	def __export__(self, pd, dim, hfile, datasetName):
 		whiteImage = vtkImageData()
 		wdata = np.zeros((dim[2], dim[0], dim[1]), dtype=np.float32)
 		#bounds = pd.GetBounds()
@@ -71,6 +71,7 @@ class Volumizer(QtCore.QThread):
 		imgstenc.SetBackgroundValue(outval)
 		imgstenc.Update()
 
+		dset = hfile.create_dataset(datasetName, (dim[2], dim[0], dim[1]))
 		d = imgstenc.GetOutput().GetPointData().GetArray(0)
 		#print p
 		#d = whiteImage.GetPointData().GetArray(0)
@@ -82,8 +83,11 @@ class Volumizer(QtCore.QThread):
 				for x in range(dim[0]):
 					wdata[zOf][x][yOf] = d.GetTuple1(c)
 					c+=1
-
-		return wdata
+			#dset[zOf] = d.GetTuple1(c)
+		#end
+		for z in range(dim[2]):
+			dset[z] = wdata[z]
+		del dset
 
 	def export(self):
 		print 'Starting export'
@@ -94,42 +98,22 @@ class Volumizer(QtCore.QThread):
 		for i in range(count - 1):
 			datasetNames += ['elementVolume'+str(i)]
 
-		saver = H5Exporter()
-		h5st = saver.H5_Start(self.filename, datasetNames, self.dimX, self.dimY, self.dimZ, False)
+		hfile = h5py.File(self.filename, 'w')
 
 		count = len(self.allModelList)
 		for i in range(count):
+			#dset = hfile.create_dataset(datasetNames[i], (self.dimX, self.dimY, self.dimZ))
 			addPolys = vtkAppendPolyData()
 			for m in self.allModelList[i]:
 				addPolys.AddInput(m.transformFilter.GetOutput())
 			addPolys.Update()
-			'''
-			nbounds = addPolys.GetOutput().GetBounds()
-			bounds = []
-		
-			offset = 2.0
-			bounds += [nbounds[0] - offset]
-			bounds += [nbounds[1] + offset]
-			bounds += [nbounds[2] - offset]
-			bounds += [nbounds[3] + offset]
-			bounds += [nbounds[4] - offset]
-			bounds += [nbounds[5] + offset]
-			print 'bounds', bounds
-			'''
 			print 'Exporting',i+1,'of',count
 			startExport = time.time()
-			wdata = self.__export__(addPolys.GetOutput(), [self.dimX, self.dimY, self.dimZ])
+			self.__export__(addPolys.GetOutput(), [self.dimX, self.dimY, self.dimZ], hfile, datasetNames[i])
 			del addPolys
 			print 'Finished export in', int(time.time() - startExport),'seconds'
-
-			print 'Saving',i,'of',count
-			startSave = time.time()
-			for z in range(self.dimZ):
-				saver.H5_SaveSlice(h5st, datasetNames[i], wdata, z)
-			del wdata
-			print 'Finished save in', int(time.time() - startSave),'seconds'
-
-		saver.H5_End(h5st)
+		hfile.close()
+		del hfile
 		print 'Finished whole volume in', int(time.time() - startTime),' seconds'
 		self.notifyFinish.emit()
 

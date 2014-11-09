@@ -7,7 +7,7 @@ APS ANL
 from Model import Model
 import numpy as np
 import math, time, sys
-from H5Exporter import H5Exporter
+import h5py
 from PyQt4 import QtCore
 from vtk import *
 import Optics
@@ -26,12 +26,13 @@ class Scanner(QtCore.QThread):
 		self.stopRot = 0.0
 		self.numImages = 180
 		self.Stop = False
-		self.saver = None
-		self.h5st = None
+		self.dsetLock = None
+		self.hfile = None
 		self.bSaveTheta = False
 		self.bounds = []
 		self.objectives = []
 		self.calc = Optics.Optics()
+		self.hdfFiles = []
 
 	def initLocator(self):
 		polys = vtkAppendPolyData()
@@ -50,11 +51,23 @@ class Scanner(QtCore.QThread):
 	def exportTomoScanToHDF(self):
 		print self.datasetName,' exporting tomo scan'
 
+		self.obj_dsets = []
+		self.dsetLock.lock()
+		self.dset = self.hfile.create_dataset(self.datasetName, (self.numImages, self.dimX, self.dimY))
+		for i in range(len(self.hdfFiles)):
+			self.obj_dsets += [ self.hdfFiles[i].create_dataset(self.datasetName, (self.numImages, self.dimX, self.dimY)) ]
+		self.dsetLock.unlock()
+
 		wdata = np.zeros((self.numImages, self.dimX, self.dimY), dtype=np.float32)
 		if self.bSaveTheta:
 			thetaDset = np.zeros((self.numImages), dtype=np.float32)
 			#create theta rotation dataset
-			thetaH5st = self.saver.H5_Gen1DDataset(self.h5st.fid, 'exchange/theta', self.numImages)
+			self.dsetLock.lock()
+			thetaH5 = self.hfile.create_dataset('exchange/theta', (self.numImages,))
+			self.obj_thetas = [  ]
+			for i in range(len(self.hdfFiles)):
+				self.obj_thetas += [ self.hdfFiles[i].create_dataset('exchange/theta', (self.numImages,)) ]
+			self.dsetLock.unlock()
 
 		baseLocator, nbounds = self.initLocator()
 
@@ -109,13 +122,21 @@ class Scanner(QtCore.QThread):
 				calc.coherent(wdata[n], 
 				#then save
 			'''
-			self.saver.H5_SaveSlice(self.h5st, self.datasetName, wdata, n)
+			self.dsetLock.lock()
+			self.dset[n] = wdata[n]
+			for i in range(len(self.obj_dsets)):
+				self.obj_dsets[i][n] = self.calc.coherent(wdata[n], self.objectives[i])
+			self.dsetLock.unlock()
+
 			angle += delta
 			endTime = time.time()
 			print self.datasetName, ' ',int(endTime - startTime),'seconds per image'
 		if self.bSaveTheta:
-			self.saver.H5_SaveDset(thetaH5st, 'exchange/theta', thetaDset)
-			self.saver.H5_EndDset(thetaH5st)
+			self.dsetLock.lock()
+			thetaH5[:] = thetaDset[:]
+			for i in range(len(self.hdfFiles)):
+				self.obj_thetas[i][:] = thetaDset[:]
+		self.dsetLock.unlock()
 		self.notifyFinish.emit()
 		print self.datasetName,' finished exporting'
 
