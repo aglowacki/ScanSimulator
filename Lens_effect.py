@@ -18,18 +18,19 @@ def init_objectives(lenses, photons, imageSize):
 		objs += [obj]
 	return objs
 
-def convert_dset(f, objs, oCalc, dset):
+def convert_dset(f, objs, cbFunc, dset):
 	ndset = f.create_dataset('/exchange/'+dset[0], dset[1].shape, chunks=(1, dset[1].shape[1], dset[1].shape[2]), compression='gzip', compression_opts=6 )
 	for j in range(dset[1].shape[0]):
-		#ndset[j] = oCalc.coherent(dset[1][j], objs)
-		ndset[j] = oCalc.incoherent(dset[1][j], objs)
+		ndset[j] = cbFunc(dset[1][j], objs)
+		#ndset[j] = coherent(dset[1][j], objs)
+		#ndset[j] = incoherent(dset[1][j], objs)
 		#print 'finished',j,'of',180
 
-def iter_grp(f, grp, objs, oCalc):
+def iter_grp(f, grp, objs, cbFunc):
 	for d in grp.iteritems():
 		if len(d[1].shape) == 3:
 			print 'converting',d[0]
-			convert_dset(f, objs, oCalc, d)
+			convert_dset(f, objs, cbFunc, d)
 		else:
 			ndset = f.create_dataset('/exchange/'+d[0], d[1].shape)
 			ndset[:] = d[1][:]
@@ -58,13 +59,21 @@ if __name__ == '__main__':
 	d = hf['/exchange/data']
 	objs = init_objectives(lenses, photons, d.shape[1])
 
-	oCalc = Optics()
+	fileAddOn = ''
+	if cotype == 'inc':
+		print 'setting incoherent'
+		cbFunc = incoherent
+		fileAddOn = '_inc'
+	else:
+		print 'setting coherent'
+		cbFunc = coherent
+		fileAddOn = '_co'
 	grp = hf['/exchange']
 	for i in range(len(lenses)):
-		fname = sys.argv[1]+'_lens'+str(lenses[i])+'_ph'+str(photons[i])+'.h5'
+		fname = sys.argv[1]+fileAddOn+'_lens'+str(lenses[i])+'_ph'+str(photons[i])+'.h5'
 		print 'saving',fname
 		f = h5py.File(fname, 'w')
-		iter_grp(f, grp, objs[i], oCalc)
+		iter_grp(f, grp, objs[i], cbFunc)
 		f.close()
 	hf.close()
 	'''

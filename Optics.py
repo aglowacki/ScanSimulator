@@ -15,9 +15,6 @@ def distance( p1, p2):
 def shift(array):
 	return np.roll( np.roll(array, array.shape[0]/2, axis=0), array.shape[1]/2, axis=1)
 
-def randPhoton(numPhotons):
-	return np.random.normal(numPhotons, numPhotons)
-
 def save_array(imgname, array):
 	scipy.misc.imsave(imgname, array)
 
@@ -91,37 +88,36 @@ class Objective:
 
 ######################### OPTICS ###################################
 
-class Optics:
-	def __init__(self):
-		self.numCondensers = 1
 
-	def coherent(self, image_array, objective):
-		shift_objective = objective.objective_array #already shifted
-		fft_image = fft2(image_array)
-		fft_image *= shift_objective
-		image_array = ifft2(fft_image)
-		image_array *= np.conj(image_array)
-		if objective.numPhotons > 0.0:
-			image_array *= objective.numPhotons
-			#image_array *= randPhoton(objective.numPhotons)
-		return image_array.astype(np.float32)
+def coherent(image_array, objective):
+	shift_objective = objective.objective_array #already shifted
+	fft_image = fft2(image_array)
+	fft_image *= shift_objective
+	image_array = ifft2(fft_image)
+	image_array *= np.conj(image_array)
+	image_array = image_array.astype(np.float32)
+	if objective.numPhotons > 0.0:
+		image_array *= objective.numPhotons
+		#image_array[:] = np.random.normal(image_array[:])
+	return image_array
 
-	def incoherent(self, image_array, objective):
-		#done in objective.generate()
-		#psf = ifft2(objective.objective_array) # already shifted
-		#psf *= np.conj(psf)
-		#otf = fft2(psf)
-		#otf = otf / abs(otf).max()
-		image_array = image_array * np.conj(image_array)
-		image_array = shift(image_array)
-		fft_image = fft2(image_array)
-		fft_image = fft_image * objective.otf
-		image_array = ifft2(fft_image)
-		image_array = shift(image_array)
-		if objective.numPhotons > 0.0:
-			image_array *= objective.numPhotons
-			#image_array *= randPhoton(objective.numPhotons)
-		return image_array.astype(np.float32)
+def incoherent(image_array, objective):
+	#done in objective.generate()
+	#psf = ifft2(objective.objective_array) # already shifted
+	#psf *= np.conj(psf)
+	#otf = fft2(psf)
+	#otf = otf / abs(otf).max()
+	image_array = image_array * np.conj(image_array)
+	image_array = shift(image_array)
+	fft_image = fft2(image_array)
+	fft_image = fft_image * objective.otf
+	image_array = ifft2(fft_image)
+	image_array = shift(image_array)
+	image_array = image_array.astype(np.float32)
+	if objective.numPhotons > 0.0:
+		image_array *= objective.numPhotons
+		#image_array[:] = np.random.normal(image_array[:])
+	return image_array
 
 
 if __name__ == '__main__':
@@ -144,9 +140,8 @@ if __name__ == '__main__':
 	#condenser.outer_nm = 10.
 	#condenser.generate(max_freq, imageSize, imageSize)
 
-	oCalc = Optics()
 	for i in range(3):
-		new_image = oCalc.coherent(image, objs[i])
+		new_image = coherent(image, objs[i])
 		save_array('shifted_objective'+str(i)+'.jpg', objs[i].objective_array)
 		save_array('new_image'+str(i)+'.jpg', new_image)
 	print 'done'

@@ -510,6 +510,16 @@ class MainWindow(QtGui.QMainWindow):
 			self.mutex = QtCore.QMutex()
 
 			self.hdfFiles = []
+			fileAddOn = ''
+			calcFunc = Optics.coherent
+			if self.combo.currentIndex() == 0:
+				print 'coherent'
+				fileAddOn = '_co'
+				calcFunc = Optics.coherent
+			else:
+				print 'incoherent'
+				fileAddOn = '_inc'
+				calcFunc = Optics.incoherent
 			delta_obj_nm = float(self.deltaNMIn.text())
 			max_freq = 1.0 / 2.e-3 * delta_obj_nm
 			objectives = []
@@ -520,7 +530,7 @@ class MainWindow(QtGui.QMainWindow):
 				photons = str(self.numPhotons1In.text())
 				obj.numPhotons = float(photons)
 				objectives += [ obj ]
-				self.hdfFiles += [ h5py.File(filename + '_lens'+str(val1)+'_ph'+photons+'.h5', 'w') ]
+				self.hdfFiles += [ h5py.File(filename +fileAddOn+ '_lens'+str(val1)+'_ph'+photons+'.h5', 'w') ]
 			if self.UseObj2Chk.isChecked():
 				obj = Optics.Objective()
 				val1 = float(self.outNM2In.text())
@@ -528,7 +538,7 @@ class MainWindow(QtGui.QMainWindow):
 				photons = str(self.numPhotons2In.text())
 				obj.numPhotons = float(photons)
 				objectives += [ obj ]
-				self.hdfFiles += [ h5py.File(filename + '_lens'+str(val1)+'_ph'+photons+'.h5', 'w') ]
+				self.hdfFiles += [ h5py.File(filename +fileAddOn+ '_lens'+str(val1)+'_ph'+photons+'.h5', 'w') ]
 			if self.UseObj3Chk.isChecked():
 				obj = Optics.Objective()
 				val1 = float(self.outNM3In.text())
@@ -536,12 +546,13 @@ class MainWindow(QtGui.QMainWindow):
 				photons = str(self.numPhotons3In.text())
 				obj.numPhotons = float(photons)
 				objectives += [ obj ]
-				self.hdfFiles += [ h5py.File(filename + '_lens'+str(val1)+'_ph'+photons+'.h5', 'w') ]
+				self.hdfFiles += [ h5py.File(filename +fileAddOn+ '_lens'+str(val1)+'_ph'+photons+'.h5', 'w') ]
 
 			self.scanners = []
 			for i in range(scanCount):
 				self.scanners += [Scanner()]
 				self.scanners[i].objectives = objectives
+				self.scanners[i].calcFunc = calcFunc
 				self.scanners[i].hdfFiles = self.hdfFiles
 				self.scanners[i].dsetLock = self.mutex
 				self.scanners[i].hfile = self.hfile

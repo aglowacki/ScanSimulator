@@ -31,7 +31,7 @@ class Scanner(QtCore.QThread):
 		self.bSaveTheta = False
 		self.bounds = []
 		self.objectives = []
-		self.calc = Optics.Optics()
+		self.calcFunc = Optics.coherent
 		self.hdfFiles = []
 
 	def initLocator(self):
@@ -116,16 +116,11 @@ class Scanner(QtCore.QThread):
 				yStart += yItr
 			self.notifyProgress.emit(cntr)
 			cntr += 1
-			'''
 			#perform optics
-			for objIndex in self.objectives:
-				calc.coherent(wdata[n], 
-				#then save
-			'''
 			self.dsetLock.lock()
 			self.dset[n] = wdata[n]
 			for i in range(len(self.obj_dsets)):
-				self.obj_dsets[i][n] = self.calc.coherent(wdata[n], self.objectives[i])
+				self.obj_dsets[i][n] = self.calcFunc(wdata[n], self.objectives[i])
 			self.dsetLock.unlock()
 
 			angle += delta
