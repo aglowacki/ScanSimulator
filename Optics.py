@@ -90,7 +90,7 @@ class Optics:
 		fft_image = fft2(image_array)
 		fft_image *= shift_objective
 		image_array = ifft2(fft_image)
-		#image_array *= np.conj(image_array)
+		image_array *= np.conj(image_array)
 		return image_array.astype(np.float32)
 
 	def incoherent(self, image_array, objective):
