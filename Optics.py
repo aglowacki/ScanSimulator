@@ -15,6 +15,9 @@ def distance( p1, p2):
 def shift(array):
 	return np.roll( np.roll(array, array.shape[0]/2, axis=0), array.shape[1]/2, axis=1)
 
+def randPhoton(numPhotons):
+	return np.random.normal(numPhotons, numPhotons)
+
 def save_array(imgname, array):
 	scipy.misc.imsave(imgname, array)
 
@@ -61,6 +64,8 @@ class Objective:
 		self.objective_array = None
 		self.outer_cutoff_freq = 0.
 		self.inner_cutoff_freq = 0.
+		self.otf = None
+		self.numPhotons = 0.0
 
 	def generate(self, max_freq, width, height, outer_nm, inner_nm, bShifted):
 		self.outer_nm = outer_nm
@@ -76,8 +81,13 @@ class Objective:
 		#print 'max', max_freq, 'out', self.outer_cutoff_freq, 'in', self.inner_cutoff_freq
 		if bShifted:
 			self.objective_array = shift(gen_dist_circle_array(max_freq, self.outer_cutoff_freq, self.inner_cutoff_freq, width, height ))
+			psf = ifft2(self.objective_array) # already shifted
 		else:
 			self.objective_array = gen_dist_circle_array(max_freq, self.outer_cutoff_freq, self.inner_cutoff_freq, width, height )
+			psf = shift(ifft2(self.objective_array))
+		psf *= np.conj(psf)
+		self.otf = fft2(psf)
+		self.otf = self.otf / abs(self.otf).max()
 
 ######################### OPTICS ###################################
 
@@ -91,19 +101,26 @@ class Optics:
 		fft_image *= shift_objective
 		image_array = ifft2(fft_image)
 		image_array *= np.conj(image_array)
+		if objective.numPhotons > 0.0:
+			image_array *= objective.numPhotons
+			#image_array *= randPhoton(objective.numPhotons)
 		return image_array.astype(np.float32)
 
 	def incoherent(self, image_array, objective):
-		psf = ifft2(objective.objective_array) # already shifted
-		psf *= np.conj(psf)
-		otf = fft2(psf)
-		otf = otf /max(abs(otf))
-		image_array = image_array * conj(image_array)
+		#done in objective.generate()
+		#psf = ifft2(objective.objective_array) # already shifted
+		#psf *= np.conj(psf)
+		#otf = fft2(psf)
+		#otf = otf / abs(otf).max()
+		image_array = image_array * np.conj(image_array)
 		image_array = shift(image_array)
 		fft_image = fft2(image_array)
-		fft_image = fft_image * otf
+		fft_image = fft_image * objective.otf
 		image_array = ifft2(fft_image)
 		image_array = shift(image_array)
+		if objective.numPhotons > 0.0:
+			image_array *= objective.numPhotons
+			#image_array *= randPhoton(objective.numPhotons)
 		return image_array.astype(np.float32)
 
 

@@ -247,11 +247,19 @@ class MainWindow(QtGui.QMainWindow):
 		return tomoGroup
 
 	def createLensPropsWidget(self):
+		vBox0 = QtGui.QVBoxLayout()
+		
 		hBox1 = QtGui.QHBoxLayout()
 		self.deltaNMIn = QtGui.QLineEdit()
 		self.deltaNMIn.setText('1.0')
 		hBox1.addWidget(QtGui.QLabel('Delta nm:'))
 		hBox1.addWidget(self.deltaNMIn)
+		vBox0.addLayout(hBox1)
+
+		self.combo = QtGui.QComboBox()
+		self.combo.addItem("Coherent")
+		self.combo.addItem("Incoherent")
+		vBox0.addWidget(self.combo)
 
 		vBox1 = QtGui.QVBoxLayout()
 		self.UseObj1Chk = QtGui.QCheckBox("Use")
@@ -261,6 +269,10 @@ class MainWindow(QtGui.QMainWindow):
 		self.outNM1In = QtGui.QLineEdit()
 		self.outNM1In.setText('4.0')
 		vBox1.addWidget(self.outNM1In)
+		self.numPhotons1In = QtGui.QLineEdit()
+		self.numPhotons1In.setText('1.0')
+		vBox1.addWidget(QtGui.QLabel('# Photons'))
+		vBox1.addWidget(self.numPhotons1In)
 
 		vBox2 = QtGui.QVBoxLayout()
 		self.UseObj2Chk = QtGui.QCheckBox("Use")
@@ -270,6 +282,10 @@ class MainWindow(QtGui.QMainWindow):
 		self.outNM2In = QtGui.QLineEdit()
 		self.outNM2In.setText('30.0')
 		vBox2.addWidget(self.outNM2In)
+		self.numPhotons2In = QtGui.QLineEdit()
+		self.numPhotons2In.setText('1.0')
+		vBox2.addWidget(QtGui.QLabel('# Photons'))
+		vBox2.addWidget(self.numPhotons2In)
 
 		vBox3 = QtGui.QVBoxLayout()
 		self.UseObj3Chk = QtGui.QCheckBox("Use")
@@ -279,13 +295,19 @@ class MainWindow(QtGui.QMainWindow):
 		self.outNM3In = QtGui.QLineEdit()
 		self.outNM3In.setText('100.0')
 		vBox3.addWidget(self.outNM3In)
+		self.numPhotons3In = QtGui.QLineEdit()
+		self.numPhotons3In.setText('1.0')
+		vBox3.addWidget(QtGui.QLabel('# Photons'))
+		vBox3.addWidget(self.numPhotons3In)
 		
-		hBox1.addLayout(vBox1)
-		hBox1.addLayout(vBox2)
-		hBox1.addLayout(vBox3)
+		hBox0 = QtGui.QHBoxLayout()
+		hBox0.addLayout(vBox0)
+		hBox0.addLayout(vBox1)
+		hBox0.addLayout(vBox2)
+		hBox0.addLayout(vBox3)
 
 		group = QtGui.QGroupBox("Objectives")
-		group.setLayout(hBox1)
+		group.setLayout(hBox0)
 
 		return group
 
@@ -495,20 +517,26 @@ class MainWindow(QtGui.QMainWindow):
 				obj = Optics.Objective()
 				val1 = float(self.outNM1In.text())
 				obj.generate(max_freq, dimX, dimY, val1, 500.0, True)
+				photons = str(self.numPhotons1In.text())
+				obj.numPhotons = float(photons)
 				objectives += [ obj ]
-				self.hdfFiles += [ h5py.File(filename + str(val1)+'.h5', 'w') ]
+				self.hdfFiles += [ h5py.File(filename + '_lens'+str(val1)+'_ph'+photons+'.h5', 'w') ]
 			if self.UseObj2Chk.isChecked():
 				obj = Optics.Objective()
 				val1 = float(self.outNM2In.text())
 				obj.generate(max_freq, dimX, dimY, val1, 500.0, True)
+				photons = str(self.numPhotons2In.text())
+				obj.numPhotons = float(photons)
 				objectives += [ obj ]
-				self.hdfFiles += [ h5py.File(filename + str(val1)+'.h5', 'w') ]
+				self.hdfFiles += [ h5py.File(filename + '_lens'+str(val1)+'_ph'+photons+'.h5', 'w') ]
 			if self.UseObj3Chk.isChecked():
 				obj = Optics.Objective()
 				val1 = float(self.outNM3In.text())
 				obj.generate(max_freq, dimX, dimY, val1, 500.0, True)
+				photons = str(self.numPhotons3In.text())
+				obj.numPhotons = float(photons)
 				objectives += [ obj ]
-				self.hdfFiles += [ h5py.File(filename + str(val1)+'.h5', 'w') ]
+				self.hdfFiles += [ h5py.File(filename + '_lens'+str(val1)+'_ph'+photons+'.h5', 'w') ]
 
 			self.scanners = []
 			for i in range(scanCount):
