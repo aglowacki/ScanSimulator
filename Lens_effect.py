@@ -18,7 +18,7 @@ def init_objectives(lenses, imageSize):
 	return objs
 
 def convert_dset(f, objs, oCalc, dset):
-	ndset = f.create_dataset('/exchange/'+dset[0], dset[1].shape)
+	ndset = f.create_dataset('/exchange/'+dset[0], dset[1].shape, chunks=(1, dset[1].shape[1], dset[1].shape[2]), compression='gzip', compression_opts=6 )
 	for j in range(dset[1].shape[0]):
 		ndset[j] = oCalc.coherent(dset[1][j], objs)
 		#print 'finished',j,'of',180
@@ -52,7 +52,7 @@ if __name__ == '__main__':
 	oCalc = Optics()
 	grp = hf['/exchange']
 	for i in range(len(lenses)):
-		fname = sys.argv[1]+'_'+str(lenses[i])+'.h5'
+		fname = sys.argv[1]+'_lens'+str(lenses[i])+'.h5'
 		print 'saving',fname
 		f = h5py.File(fname, 'w')
 		iter_grp(f, grp, objs[i], oCalc)

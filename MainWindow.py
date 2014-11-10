@@ -478,7 +478,7 @@ class MainWindow(QtGui.QMainWindow):
 			datasetNames = ['exchange/data']
 			for i in range(scanCount - 1): 
 				datasetNames += ['exchange/element'+str(i)]
-			self.hfile = h5py.File(filename, 'w', chunks=(1, dimX, dimY))
+			self.hfile = h5py.File(filename, 'w')
 
 			self.scanProgressBar.setRange(0, numImages * scanCount )
 			self.scanProgressBar.setValue(0)

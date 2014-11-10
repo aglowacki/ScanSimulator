@@ -53,9 +53,9 @@ class Scanner(QtCore.QThread):
 
 		self.obj_dsets = []
 		self.dsetLock.lock()
-		self.dset = self.hfile.create_dataset(self.datasetName, (self.numImages, self.dimX, self.dimY))
+		self.dset = self.hfile.create_dataset(self.datasetName, (self.numImages, self.dimX, self.dimY), chunks=(1, self.dimX, self.dimY), compression='gzip', compression_opts=6 )
 		for i in range(len(self.hdfFiles)):
-			self.obj_dsets += [ self.hdfFiles[i].create_dataset(self.datasetName, (self.numImages, self.dimX, self.dimY)) ]
+			self.obj_dsets += [ self.hdfFiles[i].create_dataset(self.datasetName, (self.numImages, self.dimX, self.dimY), chunks=(1, self.dimX, self.dimY), compression='gzip', compression_opts=6 ) ]
 		self.dsetLock.unlock()
 
 		wdata = np.zeros((self.numImages, self.dimX, self.dimY), dtype=np.float32)
