@@ -103,7 +103,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.ElementScaleEnd.setText('0.2')
 		self.ElementsPerFaceIn.setText('1')
 		self.NumElementsIn.setText('1')
-		self.UseMultiSpheresChk.setChecked(True)
+		self.UseMultiSpheresChk.setChecked(False)
 
 		'''
 		self.BaseScaleStart.setFixedWidth(32)
@@ -144,7 +144,7 @@ class MainWindow(QtGui.QMainWindow):
 		hBox2.addWidget(QtGui.QLabel("Num Per Suface:"))
 		hBox2.addWidget(self.ElementsPerFaceIn)
 		vBox2.addLayout(hBox2)
-		vBox2.addWidget(self.UseMultiSpheresChk)
+		#vBox2.addWidget(self.UseMultiSpheresChk)
 
 		hBox3 = QtGui.QHBoxLayout()
 		hBox3.addWidget(QtGui.QLabel("From:"))
