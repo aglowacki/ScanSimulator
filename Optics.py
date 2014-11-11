@@ -90,23 +90,21 @@ class Objective:
 
 
 def coherent(image_array, objective):
+	if objective.numPhotons > 0.0:
+		image_array *= objective.numPhotons
+		image_array[:] = np.random.normal(image_array[:])
 	shift_objective = objective.objective_array #already shifted
 	fft_image = fft2(image_array)
 	fft_image *= shift_objective
 	image_array = ifft2(fft_image)
 	image_array *= np.conj(image_array)
 	image_array = image_array.astype(np.float32)
-	if objective.numPhotons > 0.0:
-		image_array *= objective.numPhotons
-		#image_array[:] = np.random.normal(image_array[:])
 	return image_array
 
 def incoherent(image_array, objective):
-	#done in objective.generate()
-	#psf = ifft2(objective.objective_array) # already shifted
-	#psf *= np.conj(psf)
-	#otf = fft2(psf)
-	#otf = otf / abs(otf).max()
+	if objective.numPhotons > 0.0:
+		image_array *= objective.numPhotons
+		image_array[:] = np.random.normal(image_array[:])
 	image_array = image_array * np.conj(image_array)
 	image_array = shift(image_array)
 	fft_image = fft2(image_array)
@@ -114,9 +112,6 @@ def incoherent(image_array, objective):
 	image_array = ifft2(fft_image)
 	image_array = shift(image_array)
 	image_array = image_array.astype(np.float32)
-	if objective.numPhotons > 0.0:
-		image_array *= objective.numPhotons
-		#image_array[:] = np.random.normal(image_array[:])
 	return image_array
 
 
