@@ -143,13 +143,13 @@ class GenerateWithCubesAndSphereThread(QtCore.QThread):
 							
 							#randomize where on the face we put it
 							if random.random() > 0.5:
-								op1 = 1
+								op1 = 0.85
 							else:
-								op1 = -1
+								op1 = -0.85
 							if random.random() > 0.5:
-								op2 = 1
+								op2 = 0.85
 							else:
-								op2 = -1
+								op2 = -0.85
 							if not sTrans[i][0] == 0.0:
 								sYTran += random.random() * sTrans[1][0] * op1
 								sZTran += random.random() * sTrans[1][0] * op2
